@@ -1,37 +1,18 @@
 ﻿using MelonLoader;
+using RiptideNetworkLayer.Utilities;
 
-namespace bonelab_template
+namespace RiptideNetworkLayer
 {
     internal partial class Main : MelonMod
     {
         public override void OnEarlyInitializeMelon()
         {
-            base.OnEarlyInitializeMelon();
-        }
+            NetstandardLoader.Load();
+            RiptideNetworkingLoader.Load();
 
-        public override void OnInitializeMelon()
-        {
-            base.OnInitializeMelon();
-        }
+            LabFusion.Network.NetworkLayer.RegisterLayersFromAssembly(System.Reflection.Assembly.GetExecutingAssembly());
 
-        public override void OnLateInitializeMelon()
-        {
-            base.OnLateInitializeMelon();
-        }
-
-        public override void OnUpdate()
-        {
-            base.OnUpdate();
-        }
-
-        public override void OnFixedUpdate()
-        {
-            base.OnFixedUpdate();
-        }
-
-        public override void OnLateUpdate()
-        {
-            base.OnLateUpdate();
+            TideContentLoader.OnBundleLoad();
         }
     }
 }

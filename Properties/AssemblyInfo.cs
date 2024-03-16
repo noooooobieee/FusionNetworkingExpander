@@ -1,16 +1,16 @@
 ﻿using System.Reflection;
-using bonelab_template;
+using RiptideNetworkLayer;
 using MelonLoader;
 
-[assembly: AssemblyTitle(bonelab_template.Main.Description)]
-[assembly: AssemblyDescription(bonelab_template.Main.Description)]
-[assembly: AssemblyCompany(bonelab_template.Main.Company)]
-[assembly: AssemblyProduct(bonelab_template.Main.Name)]
-[assembly: AssemblyCopyright("Developed by " + bonelab_template.Main.Author)]
-[assembly: AssemblyTrademark(bonelab_template.Main.Company)]
-[assembly: AssemblyVersion(bonelab_template.Main.Version)]
-[assembly: AssemblyFileVersion(bonelab_template.Main.Version)]
-[assembly: MelonInfo(typeof(bonelab_template.Main), bonelab_template.Main.Name, bonelab_template.Main.Version, bonelab_template.Main.Author, bonelab_template.Main.DownloadLink)]
+[assembly: AssemblyTitle(RiptideNetworkLayer.Main.Description)]
+[assembly: AssemblyDescription(RiptideNetworkLayer.Main.Description)]
+[assembly: AssemblyCompany(RiptideNetworkLayer.Main.Company)]
+[assembly: AssemblyProduct(RiptideNetworkLayer.Main.Name)]
+[assembly: AssemblyCopyright("Developed by " + RiptideNetworkLayer.Main.Author)]
+[assembly: AssemblyTrademark(RiptideNetworkLayer.Main.Company)]
+[assembly: AssemblyVersion(RiptideNetworkLayer.Main.Version)]
+[assembly: AssemblyFileVersion(RiptideNetworkLayer.Main.Version)]
+[assembly: MelonInfo(typeof(RiptideNetworkLayer.Main), RiptideNetworkLayer.Main.Name, RiptideNetworkLayer.Main.Version, RiptideNetworkLayer.Main.Author, RiptideNetworkLayer.Main.DownloadLink)]
 [assembly: MelonColor(System.ConsoleColor.White)]
 
 // Create and Setup a MelonGame Attribute to mark a Melon as Universal or Compatible with specific Games.
