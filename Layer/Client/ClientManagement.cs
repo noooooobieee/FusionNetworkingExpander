@@ -121,7 +121,7 @@ namespace RiptideNetworkLayer.Layer
         internal static string DisconnectedReason = "";
         public static void OnDisconnectFromServer(object sender, DisconnectedEventArgs args)
         {
-            if (DisconnectedReason == "")
+            if (DisconnectedReason != "")
                 InternalServerHelpers.OnDisconnect(DisconnectedReason);
             else
                 InternalServerHelpers.OnDisconnect(GetDisconnectReason(args.Reason));

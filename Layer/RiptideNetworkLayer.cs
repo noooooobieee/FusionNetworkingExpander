@@ -32,6 +32,10 @@ using static RiptideNetworkLayer.Layer.ServerManagement;
 using LabFusion.Voice.Unity;
 using RiptideNetworkLayer.Utilities;
 using Steamworks;
+using JetBrains.Annotations;
+using LiteNetLib;
+using LiteNetLib.Utils;
+using System.Threading;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -84,6 +88,7 @@ namespace RiptideNetworkLayer.Layer
             // Riptide Hooks
             CurrentServer.ClientDisconnected += OnClientDisconnect;
             CurrentServer.ClientConnected += OnClientConnect;
+
             CurrentClient.Disconnected += OnDisconnectFromServer;
             CurrentClient.ConnectionFailed += OnConnectionFail;
 
@@ -155,6 +160,8 @@ namespace RiptideNetworkLayer.Layer
 
             // Server Listings
             ServerListingCategory.CreateServerListingCategory(matchmaking);
+
+            // LAN Discovery
         }
 
         private void OnDislayServerCode()
