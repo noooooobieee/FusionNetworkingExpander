@@ -53,7 +53,7 @@ namespace RiptideNetworkLayer.Layer
         {
             CurrentClient.Connected -= OnConnectToP2PServer;
 
-            CurrentClient.TimeoutTime = 30000;
+            CurrentClient.TimeoutTime = 60000;
             CurrentClient.Connection.CanQualityDisconnect = false;
             
             PlayerIdManager.SetLongId(CurrentClient.Id);
@@ -81,7 +81,7 @@ namespace RiptideNetworkLayer.Layer
 
         public static void OnClientConnect(object obj, ServerConnectedEventArgs args)
         {
-            args.Client.TimeoutTime = 30000;
+            args.Client.TimeoutTime = 60000;
             args.Client.CanQualityDisconnect = false;
         }
 

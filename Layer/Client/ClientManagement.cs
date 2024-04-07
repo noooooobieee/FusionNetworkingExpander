@@ -37,18 +37,16 @@ namespace RiptideNetworkLayer.Layer
         {
             if (IsConnecting)
             {
-                if (ClientManagement.IsConnecting)
+                FusionNotifier.Send(new FusionNotification()
                 {
-                    FusionNotifier.Send(new FusionNotification()
-                    {
-                        showTitleOnPopup = false,
-                        message = $"Already connecting to a server!",
-                        isMenuItem = false,
-                        isPopup = true,
-                        popupLength = 5f,
-                        type = NotificationType.WARNING
-                    });
-                }
+                    showTitleOnPopup = false,
+                    message = $"Already connecting to a server!",
+                    isMenuItem = false,
+                    isPopup = true,
+                    popupLength = 5f,
+                    type = NotificationType.WARNING
+                });
+
                 return;
             }
 
@@ -88,7 +86,7 @@ namespace RiptideNetworkLayer.Layer
 
             IsConnecting = false;
 
-            CurrentClient.Connection.TimeoutTime = 30000;
+            CurrentClient.Connection.TimeoutTime = 60000;
             CurrentClient.Connection.CanQualityDisconnect = false;
 
             PlayerIdManager.SetLongId(CurrentClient.Id);
@@ -106,12 +104,13 @@ namespace RiptideNetworkLayer.Layer
         public static void OnConnectionFail(object sender, ConnectionFailedEventArgs e)
         {
             IsConnecting = false;
+            CurrentClient.Connected -= OnConnect;
 
             FusionNotifier.Send(new FusionNotification()
             {
                 title = "Connection Failed",
                 showTitleOnPopup = true,
-                message = $"Failed to connect to server! Is the server running?",
+                message = $"Failed to connect to server! Is the server running and the host has their port forwarded?",
                 isMenuItem = false,
                 isPopup = true,
                 popupLength = 5f,
@@ -119,9 +118,30 @@ namespace RiptideNetworkLayer.Layer
             });
         }
 
+        internal static string DisconnectedReason = "";
         public static void OnDisconnectFromServer(object sender, DisconnectedEventArgs args)
         {
-            InternalServerHelpers.OnDisconnect(args.Reason.ToString());
+            if (DisconnectedReason == "")
+                InternalServerHelpers.OnDisconnect(DisconnectedReason);
+            else
+                InternalServerHelpers.OnDisconnect(GetDisconnectReason(args.Reason));
+
+            DisconnectedReason = "";
+        }
+
+        private static string GetDisconnectReason(DisconnectReason reason)
+        {
+            return reason switch
+            {
+                (DisconnectReason.ConnectionRejected) => "Connection to the server was rejected!",
+                (DisconnectReason.TransportError) => "A transport error occurred!",
+                (DisconnectReason.TimedOut) => "Connection timed out!",
+                (DisconnectReason.Kicked) => "You were kicked from the server!",
+                (DisconnectReason.ServerStopped) => "The server has stopped!",
+                (DisconnectReason.Disconnected) => "You have disconnected from the server!",
+                (DisconnectReason.PoorConnection) => "Connection quality was poor!",
+                _ => "Idk lol",
+            };
         }
 
         /// <summary>

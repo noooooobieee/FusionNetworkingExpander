@@ -139,8 +139,12 @@ namespace RiptideNetworkLayer.Layer
 
             // Server Starting/Settings
             _createServerElement = serverInfo.CreateFunctionElement("Start Server", Color.green, () => OnClickStartServer());
+
+            // Server settings
             var p2pServerSettingsMenu = serverInfo.CreateCategory("P2P Server Settings", Color.cyan);
             _serverPortKeyboard = Keyboard.CreateKeyboard(p2pServerSettingsMenu, $"Server Port:\n{RiptidePreferences.LocalServerSettings.ServerPort.GetValue()}", (port) => OnChangeServerPort(port));
+
+            // Server code
             serverInfo.CreateFunctionElement("Display Server Code", Color.white, () => OnDislayServerCode());
 
             // Server Info
@@ -172,17 +176,11 @@ namespace RiptideNetworkLayer.Layer
             // Is a server already running? Disconnect
             if (IsClient)
             {
-#if DEBUG
-                MelonLogger.Msg("Disconnecting from Riptide server");
-#endif
                 Disconnect();
             }
             // Otherwise, start a server
             else
             {
-#if DEBUG
-                MelonLogger.Msg("Starting Riptide server");
-#endif
                 ServerManagement.StartServer();
             }
         }
@@ -354,19 +352,17 @@ namespace RiptideNetworkLayer.Layer
 
         public override void Disconnect(string reason = "")
         {
-            {
-                if (!IsServer && !IsClient)
-                    return;
+            DisconnectedReason = reason;
 
-                if (IsClient)
-                    CurrentClient.Disconnect();
+            if (!IsServer && !IsClient)
+                return;
 
-                FusionLogger.Log(reason);
+            if (IsClient)
+                CurrentClient.Disconnect();
 
-                CurrentServer.Stop();
+            CurrentServer.Stop();
 
-                OnUpdateLobby();
-            }
+            OnUpdateLobby();
         }
 
         public override void OnCleanupLayer()
