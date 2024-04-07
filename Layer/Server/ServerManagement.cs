@@ -14,6 +14,8 @@ using RiptideNetworkLayer.Preferences;
 using LabFusion.Utilities;
 using System.Net;
 using static RiptideNetworkLayer.Layer.ClientManagement;
+using System.Threading;
+using LabFusion.Voice;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -51,7 +53,7 @@ namespace RiptideNetworkLayer.Layer
         {
             CurrentClient.Connected -= OnConnectToP2PServer;
 
-            CurrentClient.TimeoutTime = 15000;
+            CurrentClient.TimeoutTime = 30000;
             CurrentClient.Connection.CanQualityDisconnect = false;
             
             PlayerIdManager.SetLongId(CurrentClient.Id);
@@ -79,8 +81,8 @@ namespace RiptideNetworkLayer.Layer
 
         public static void OnClientConnect(object obj, ServerConnectedEventArgs args)
         {
+            args.Client.TimeoutTime = 30000;
             args.Client.CanQualityDisconnect = false;
-            args.Client.TimeoutTime = 15000;
         }
 
         /// <summary>
@@ -88,9 +90,9 @@ namespace RiptideNetworkLayer.Layer
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="args"></param>
-        public static void OnMessageReceived(object obj, MessageReceivedEventArgs args)
+        public static void OnMessageReceived(object sender, MessageReceivedEventArgs message)
         {
-            RiptideFusionMessage.HandleServerFusionMessage(args.Message);
+            FusionMessageHandler.ReadMessage(VoiceCompressor.DecompressVoiceData(message.Message.GetBytes()), true);
         }
     }
 }

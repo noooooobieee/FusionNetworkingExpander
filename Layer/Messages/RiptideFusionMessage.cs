@@ -1,6 +1,7 @@
 ﻿using LabFusion.Network;
 using LabFusion.Riptide.Utilities;
 using LabFusion.Utilities;
+using LabFusion.Voice;
 using Riptide;
 using System;
 using System.Collections.Generic;
@@ -17,37 +18,27 @@ namespace RiptideNetworkLayer.Layer
         /// <summary>
         /// Creates a Riptide message from a Fusion message.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="channel"></param>
         /// <returns></returns>
-        public static Message CreateFusionMessage(FusionMessage message, NetworkChannel channel, ushort messageId = 0)
+        public static Message CreateFusionMessage(FusionMessage message, NetworkChannel channel, ushort messageId)
         {
-            return Message.Create(ConvertSendMode(channel), messageId).AddBytes(message.ToByteArray());
-        }
+            Message riptideMessage = Message.Create(ConvertSendMode(channel), messageId);
 
-        internal static void HandleClientFusionMessage(Message message)
-        {
-            FusionMessageHandler.ReadMessage(message.GetBytes());
-        }
+            var bytes = VoiceCompressor.CompressVoiceData(message.ToByteArray());
 
-        internal static void HandleServerFusionMessage(Message message)
-        {
-            FusionMessageHandler.ReadMessage(message.GetBytes(), true);
+            riptideMessage.AddBytes(bytes);
+
+            return riptideMessage;
         }
 
         private static MessageSendMode ConvertSendMode(NetworkChannel fusionChannel)
         {
-            switch (fusionChannel)
+            return fusionChannel switch
             {
-                case NetworkChannel.Unreliable:
-                    return MessageSendMode.Unreliable;
-                case NetworkChannel.Reliable:
-                    return MessageSendMode.Reliable;
-                case NetworkChannel.VoiceChat:
-                    return MessageSendMode.Unreliable;
-                default: 
-                    return MessageSendMode.Unreliable;
-            }
+                NetworkChannel.Unreliable => MessageSendMode.Unreliable,
+                NetworkChannel.Reliable => MessageSendMode.Reliable,
+                NetworkChannel.VoiceChat => MessageSendMode.Unreliable,
+                _ => MessageSendMode.Unreliable,
+            };
         }
     }
 }

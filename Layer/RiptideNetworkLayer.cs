@@ -42,7 +42,7 @@ namespace RiptideNetworkLayer.Layer
         public override bool IsClient => CheckIsClient();
         public override bool IsServer => CheckIsServer();
 
-        private IVoiceManager _voiceManager;
+        private IVoiceManager _voiceManager = null;
         public override IVoiceManager VoiceManager => _voiceManager;
 
         public override string Title => "Riptide";
@@ -63,7 +63,8 @@ namespace RiptideNetworkLayer.Layer
 #endif
             RiptidePreferences.OnInitializePreferences();
 
-            Message.MaxPayloadSize = 30000;
+            Message.MaxPayloadSize = 1024 * 1024;
+
             HookRiptideEvents();
 
             _voiceManager = new UnityVoiceManager();
@@ -76,8 +77,6 @@ namespace RiptideNetworkLayer.Layer
         {
             PlayerInfo.InitializeUsername();
             PlayerInfo.InitializePlayerIPAddress();
-
-            CurrentServer.TimeoutTime = 30000;
         }
 
         private void HookRiptideEvents()
@@ -88,7 +87,6 @@ namespace RiptideNetworkLayer.Layer
             CurrentClient.Disconnected += OnDisconnectFromServer;
             CurrentClient.ConnectionFailed += OnConnectionFail;
 
-            // Riptide Messages
             CurrentServer.MessageReceived += ServerManagement.OnMessageReceived;
             CurrentClient.MessageReceived += ClientManagement.OnMessageReceived;
 
@@ -127,11 +125,6 @@ namespace RiptideNetworkLayer.Layer
             BoneMenuCreator.CreateGamemodesMenu(category);
             BoneMenuCreator.CreateSettingsMenu(category);
             BoneMenuCreator.CreateNotificationsMenu(category);
-
-#if DEBUG
-            // Debug only (dev tools)
-            BoneMenuCreator.CreateDebugMenu(category);
-#endif
         }
 
         private FunctionElement _createServerElement;
@@ -160,26 +153,6 @@ namespace RiptideNetworkLayer.Layer
             ServerListingCategory.CreateServerListingCategory(matchmaking);
         }
 
-        private bool Internal_CanShowLobby(LobbyMetadataInfo info)
-        {
-            // Make sure the lobby is actually open
-            if (!info.HasServerOpen)
-                return false;
-
-            // Decide if this server is too private
-            switch (info.Privacy)
-            {
-                default:
-                case ServerPrivacy.LOCKED:
-                case ServerPrivacy.PRIVATE:
-                    return false;
-                case ServerPrivacy.PUBLIC:
-                    return true;
-                case ServerPrivacy.FRIENDS_ONLY:
-                    return IsFriend(info.LobbyId);
-            }
-        }
-
         private void OnDislayServerCode()
         {
             FusionNotifier.Send(new FusionNotification()
@@ -199,11 +172,17 @@ namespace RiptideNetworkLayer.Layer
             // Is a server already running? Disconnect
             if (IsClient)
             {
+#if DEBUG
+                MelonLogger.Msg("Disconnecting from Riptide server");
+#endif
                 Disconnect();
             }
             // Otherwise, start a server
             else
             {
+#if DEBUG
+                MelonLogger.Msg("Starting Riptide server");
+#endif
                 ServerManagement.StartServer();
             }
         }
@@ -332,18 +311,18 @@ namespace RiptideNetworkLayer.Layer
         {
             if (IsServer)
             {
-                CurrentServer.SendToAll(RiptideFusionMessage.CreateFusionMessage(message, channel));
+                CurrentServer.SendToAll(RiptideFusionMessage.CreateFusionMessage(message, channel, 0));
             }
             else
             {
-                CurrentClient.Send(RiptideFusionMessage.CreateFusionMessage(message, channel));
+                CurrentClient.Send(RiptideFusionMessage.CreateFusionMessage(message, channel, 0));
             }
         }
         #endregion
         #region SENDTOSERVER
         public override void SendToServer(NetworkChannel channel, FusionMessage message)
         {
-            CurrentClient.Send(RiptideFusionMessage.CreateFusionMessage(message, channel));
+            CurrentClient.Send(RiptideFusionMessage.CreateFusionMessage(message, channel,  0));
         }
         #endregion
         #region SENDFROMSERVER
@@ -366,7 +345,7 @@ namespace RiptideNetworkLayer.Layer
                 }
                 else if (CurrentServer.TryGetClient((ushort)userId, out var client))
                 {
-                    CurrentServer.Send(RiptideFusionMessage.CreateFusionMessage(message, channel), client);
+                    CurrentServer.Send(RiptideFusionMessage.CreateFusionMessage(message, channel, 0), client);
                 }
             }
         }
@@ -381,6 +360,8 @@ namespace RiptideNetworkLayer.Layer
 
                 if (IsClient)
                     CurrentClient.Disconnect();
+
+                FusionLogger.Log(reason);
 
                 CurrentServer.Stop();
 

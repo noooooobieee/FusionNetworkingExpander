@@ -5,13 +5,8 @@ namespace RiptideNetworkLayer
 {
     internal partial class Main : MelonMod
     {
-        public override void OnEarlyInitializeMelon()
+        public override void OnInitializeMelon()
         {
-            NetstandardLoader.Load();
-            RiptideNetworkingLoader.Load();
-
-            LabFusion.Network.NetworkLayer.RegisterLayersFromAssembly(System.Reflection.Assembly.GetExecutingAssembly());
-
             TideContentLoader.OnBundleLoad();
         }
     }

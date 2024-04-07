@@ -15,6 +15,9 @@ using System.Drawing;
 using System.Runtime.Remoting.Messaging;
 using RiptideNetworkLayer.Preferences;
 using System.Net;
+using MelonLoader;
+using Steamworks.Data;
+using LabFusion.Voice;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -74,26 +77,25 @@ namespace RiptideNetworkLayer.Layer
             if (!code.Contains("."))
                 code = IPExtensions.DecodeIpAddress(code);
 
-            void OnConnect(object sender, EventArgs e)
-            {
-                CurrentClient.Connected -= OnConnect;
-
-                IsConnecting = false;
-
-                CurrentClient.TimeoutTime = 15000;
-                CurrentClient.Connection.CanQualityDisconnect = false;
-
-                PlayerIdManager.SetLongId(CurrentClient.Id);
-
-                ConnectionSender.SendConnectionRequest();
-
-                InternalLayerHelpers.OnUpdateLobby();
-            }
-
             CurrentClient.Connected += OnConnect;
             CurrentClient.Connect($"{code}:{port}", 5, 0, null, false);
 
             IsConnecting = true;
+        }
+        private static void OnConnect(object sender, EventArgs e)
+        {
+            CurrentClient.Connected -= OnConnect;
+
+            IsConnecting = false;
+
+            CurrentClient.Connection.TimeoutTime = 30000;
+            CurrentClient.Connection.CanQualityDisconnect = false;
+
+            PlayerIdManager.SetLongId(CurrentClient.Id);
+
+            ConnectionSender.SendConnectionRequest();
+
+            InternalLayerHelpers.OnUpdateLobby();
         }
 
         /// <summary>
@@ -119,24 +121,15 @@ namespace RiptideNetworkLayer.Layer
 
         public static void OnDisconnectFromServer(object sender, DisconnectedEventArgs args)
         {
-            InternalServerHelpers.OnDisconnect();
+            InternalServerHelpers.OnDisconnect(args.Reason.ToString());
         }
 
         /// <summary>
         /// Calls a handler when a message is received based on its MessageId.
         /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="args"></param>
-        public static void OnMessageReceived(object obj, MessageReceivedEventArgs args)
+        public static void OnMessageReceived(object sender, MessageReceivedEventArgs message)
         {
-            switch (args.MessageId)
-            {
-                case MessageTypes.FusionMessage:
-                    {
-                        RiptideFusionMessage.HandleClientFusionMessage(args.Message);
-                        break;
-                    }
-            }
+            FusionMessageHandler.ReadMessage(VoiceCompressor.DecompressVoiceData(message.Message.GetBytes()), false);
         }
     }
 }
