@@ -36,6 +36,8 @@ using JetBrains.Annotations;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System.Threading;
+using BeaconLib;
+using System.Net;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -48,6 +50,8 @@ namespace RiptideNetworkLayer.Layer
 
         private IVoiceManager _voiceManager = null;
         public override IVoiceManager VoiceManager => _voiceManager;
+
+        internal static Beacon Beacon = new Beacon("BONELAB_Fusion", 1234);
 
         public override string Title => "Riptide";
 
@@ -162,6 +166,58 @@ namespace RiptideNetworkLayer.Layer
             ServerListingCategory.CreateServerListingCategory(matchmaking);
 
             // LAN Discovery
+            CreateLanDiscoveryMenu(matchmaking);
+        }
+
+        private void CreateLanDiscoveryMenu(MenuCategory category)
+        {
+            var lanDiscovery = category.CreateCategory("LAN Discovery", Color.white);
+
+            // Start LAN Discovery
+            lanDiscovery.CreateFunctionElement("Start LAN Discovery", Color.green, () => StartLanDiscovery(lanDiscovery));
+        }
+
+        private bool isSearching = false;
+        private float timeSearched = 0f;
+        private void StartLanDiscovery(MenuCategory category)
+        {
+            if (!isSearching)
+            {
+                isSearching = true;
+
+                category.Elements.Clear();
+                category.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(category));
+
+                var probe = new Probe("BONELAB_Fusion");
+
+                var mainContext = SynchronizationContext.Current;
+
+                probe.BeaconsUpdated += beacons =>
+                {
+                    ThreadingUtilities.RunSynchronously(() =>
+                    {
+                        probe.Stop();
+                        isSearching = false;
+
+                        foreach (var beacon in beacons)
+                        {
+                            BeaconData data = Newtonsoft.Json.JsonConvert.DeserializeObject<BeaconData>(beacon.Data);
+                            string ip = beacon.Address.ToString().Split(':')[0];
+
+                            if (data.Username != PlayerIdManager.LocalUsername)
+                                category.CreateFunctionElement($"Join {data.Username}", Color.white, () => P2PJoinServer(ip, data.Port));
+                        }
+                    });
+                };
+
+                probe.Start();
+            }
+        }
+
+        public class BeaconData(string username, ushort port)
+        {
+            public string Username = username;
+            public ushort Port = port;
         }
 
         private void OnDislayServerCode()

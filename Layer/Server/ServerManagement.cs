@@ -16,6 +16,7 @@ using System.Net;
 using static RiptideNetworkLayer.Layer.ClientManagement;
 using System.Threading;
 using LabFusion.Voice;
+using Steamworks;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -41,6 +42,8 @@ namespace RiptideNetworkLayer.Layer
 
             if (CurrentServer.IsRunning)
                 CurrentServer.Stop();
+
+            RiptideNetworkLayer.Beacon.BeaconData = Newtonsoft.Json.JsonConvert.SerializeObject(new RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
 
             CurrentServer.Start(RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), 256, 0, false);
 

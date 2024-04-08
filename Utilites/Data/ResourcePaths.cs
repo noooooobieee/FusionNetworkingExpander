@@ -13,6 +13,8 @@ namespace RiptideNetworkLayer.Utilities
     {
         internal const string RiptideNetworkingPath = "RiptideNetworkLayer.Resources.lib.RiptideNetworking.dll";
         internal const string netstandardPath = "RiptideNetworkLayer.Resources.lib.netstandard.dll";
+        internal const string NetDiscoveryPath = "RiptideNetworkLayer.Resources.lib.NetDiscovery.dll";
+        internal const string NetDiscoveryUdpPath = "RiptideNetworkLayer.Resources.lib.NetDiscovery.Udp.dll";
 
         public const string WindowsBundlePrefix = "RiptideNetworkLayer.Resources.bundles.StandaloneWindows64.";
         public const string AndroidBundlePrefix = "RiptideNetworkLayer.Resources.bundles.Android.";

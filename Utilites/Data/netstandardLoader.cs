@@ -16,7 +16,7 @@ namespace RiptideNetworkLayer.Utilities
             FusionLogger.Log("Loading netstandard");
 
             string sdkPath = PersistentData.GetPath($"netstandard.dll");
-            File.WriteAllBytes(sdkPath, EmbeddedResource.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), RiptideNetworkLayer.Utilities.ResourcePaths.netstandardPath));
+            File.WriteAllBytes(sdkPath, EmbeddedResource.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), ResourcePaths.netstandardPath));
 
             MelonLoader.MelonAssembly.LoadMelonAssembly(sdkPath);
         }
