@@ -43,7 +43,7 @@ namespace RiptideNetworkLayer.Layer
             if (CurrentServer.IsRunning)
                 CurrentServer.Stop();
 
-            RiptideNetworkLayer.Beacon.BeaconData = Newtonsoft.Json.JsonConvert.SerializeObject(new RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
 
             CurrentServer.Start(RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), 256, 0, false);
 

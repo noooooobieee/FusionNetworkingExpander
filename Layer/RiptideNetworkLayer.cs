@@ -36,13 +36,16 @@ using JetBrains.Annotations;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System.Threading;
-using BeaconLib;
 using System.Net;
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
 
 namespace RiptideNetworkLayer.Layer
 {
     public class RiptideNetworkLayer : NetworkLayer
     {
+        internal static RiptideNetworkLayer Instance;
+
         public static readonly string TideFusionPath = $"{MelonUtils.UserDataDirectory}/TideFusion";
 
         public override bool IsClient => CheckIsClient();
@@ -50,8 +53,6 @@ namespace RiptideNetworkLayer.Layer
 
         private IVoiceManager _voiceManager = null;
         public override IVoiceManager VoiceManager => _voiceManager;
-
-        internal static Beacon Beacon = new Beacon("BONELAB_Fusion", 1234);
 
         public override string Title => "Riptide";
 
@@ -63,6 +64,8 @@ namespace RiptideNetworkLayer.Layer
 
         public override void OnInitializeLayer()
         {
+            Instance = this;
+
             if (!System.IO.Directory.Exists(TideFusionPath))
                 System.IO.Directory.CreateDirectory(TideFusionPath);
 
@@ -85,6 +88,66 @@ namespace RiptideNetworkLayer.Layer
         {
             PlayerInfo.InitializeUsername();
             PlayerInfo.InitializePlayerIPAddress();
+
+            InitLANDiscovery();
+        }
+
+        private UdpClient client;
+        private int clientPort;
+        private void InitLANDiscovery()
+        {
+            int startPort = 9743;
+            int endPort = 9999; // You can adjust the range as needed
+
+            for (int port = startPort; port <= endPort; port++)
+            {
+                try
+                {
+                    client = new UdpClient(port);
+                    clientPort = port;
+                    break;
+                }
+                catch (SocketException)
+                {
+                }
+            }
+
+            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.BeaconData("RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW", RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+            Thread broadcastThread = new Thread(() =>
+            {
+                UdpClient udpClient = new UdpClient();
+                udpClient.EnableBroadcast = true;
+
+                while (true)
+                {
+                    for (int i = 9743; i <= 9999; i++)
+                    {
+                            if (broadcastingBytes != null)
+                                udpClient.Send(broadcastingBytes, broadcastingBytes.Length, new IPEndPoint(IPAddress.Broadcast, i));
+                    }
+
+                    Thread.Sleep(1000);
+                }
+            });
+
+
+            broadcastThread.Start();
+        }
+
+        private object lockObject = new object();
+        private byte[] broadcastingBytes = null;
+
+        internal void ChangeBroadcastingData(BeaconData newValue)
+        {
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(newValue);
+
+            lock (lockObject)
+            {
+                broadcastingBytes = Encoding.ASCII.GetBytes(json);
+            }
         }
 
         private void HookRiptideEvents()
@@ -174,44 +237,47 @@ namespace RiptideNetworkLayer.Layer
             var lanDiscovery = category.CreateCategory("LAN Discovery", Color.white);
 
             // Start LAN Discovery
-            lanDiscovery.CreateFunctionElement("Start LAN Discovery", Color.green, () => StartLanDiscovery(lanDiscovery));
+            lanDiscovery.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(lanDiscovery));
         }
 
-        private bool isSearching = false;
-        private float timeSearched = 0f;
         private void StartLanDiscovery(MenuCategory category)
         {
-            if (!isSearching)
+            category.Elements.Clear();
+            category.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(category));
+
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, 0);
+            List<string> obtainedUsers = new List<string>();
+
+            bool hasMessages = false;
+            do
             {
-                isSearching = true;
-
-                category.Elements.Clear();
-                category.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(category));
-
-                var probe = new Probe("BONELAB_Fusion");
-
-                var mainContext = SynchronizationContext.Current;
-
-                probe.BeaconsUpdated += beacons =>
+                if (client.Available > 0)
                 {
-                    ThreadingUtilities.RunSynchronously(() =>
+                    byte[] bytes = client.Receive(ref endPoint);
+
+                    string message = Encoding.ASCII.GetString(bytes);
+                    FusionLogger.Log(message);
+
+                    BeaconData data = Newtonsoft.Json.JsonConvert.DeserializeObject<BeaconData>(message);
+
+                    // Handle message
+                    if (!obtainedUsers.Contains(data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW" && data.Username != PlayerIdManager.LocalUsername)
                     {
-                        probe.Stop();
-                        isSearching = false;
+                        obtainedUsers.Add(data.Username);
 
-                        foreach (var beacon in beacons)
-                        {
-                            BeaconData data = Newtonsoft.Json.JsonConvert.DeserializeObject<BeaconData>(beacon.Data);
-                            string ip = beacon.Address.ToString().Split(':')[0];
+#if DEBUG
+                        FusionLogger.Log($"Obtained server with username {data.Username} and port {data.Port}");
+#endif
 
-                            if (data.Username != PlayerIdManager.LocalUsername)
-                                category.CreateFunctionElement($"Join {data.Username}", Color.white, () => P2PJoinServer(ip, data.Port));
-                        }
-                    });
-                };
-
-                probe.Start();
+                        category.CreateFunctionElement($"Join {data.Username}", Color.white, () => P2PJoinServer(endPoint.Address.ToString(), data.Port));
+                    }
+                }
+                else
+                {
+                    hasMessages = true;
+                }
             }
+            while (!hasMessages);
         }
 
         public class BeaconData(string username, ushort port)

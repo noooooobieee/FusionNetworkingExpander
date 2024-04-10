@@ -44,10 +44,6 @@
     <Compile Include="BoneMenu\ServerListing.cs" />
     <Compile Include="BoneMenu\UI\Keyboard\Keyboard.cs" />
     <Compile Include="BoneMenu\UI\Keyboard\KeyboardCanvas.cs" />
-    <Compile Include="Dependencies\BeaconLib\Beacon.cs" />
-    <Compile Include="Dependencies\BeaconLib\BeaconLocation.cs" />
-    <Compile Include="Dependencies\BeaconLib\IPEndPointComparer.cs" />
-    <Compile Include="Dependencies\BeaconLib\Probe.cs" />
     <Compile Include="Patching\Fusion Patching\FusionModPatches.cs" />
     <Compile Include="Properties\BuildInfo.cs" />
     <Compile Include="Layer\Client\ClientManagement.cs" />
@@ -97,6 +93,9 @@
     </Reference>
     <Reference Include="Il2CppSystem">
       <HintPath>..\HideAndSeek\Resources\Assemblies\Il2CppSystem.dll</HintPath>
+    </Reference>
+    <Reference Include="JNISharp">
+      <HintPath>..\..\..\..\..\Downloads\JNISharp-master\JNISharp\bin\Debug\net35\JNISharp.dll</HintPath>
     </Reference>
     <Reference Include="LabFusion %281%29" Publicize="true">
       <HintPath>..\..\..\..\..\Downloads\LabFusion (1).dll</HintPath>

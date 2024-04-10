@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
-using BeaconLib;
 using BoneLib;
 using LabFusion.Representation;
 using LabFusion.Utilities;
@@ -42,10 +41,7 @@ namespace LabFusion.Riptide.Utilities
 
                     PlayerIdManager.SetUsername(SteamClient.Name);
 
-                    RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.BeaconData = SteamClient.Name;
-                    RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.Start();
-
-                    RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.BeaconData = Newtonsoft.Json.JsonConvert.SerializeObject(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(SteamClient.Name, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+                    RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
 
                     SteamClient.Shutdown();
                 }
@@ -67,21 +63,15 @@ namespace LabFusion.Riptide.Utilities
             if (!msg.IsError)
             {
                 PlayerIdManager.SetUsername(msg.Data.OculusID);
-
-                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.BeaconData = msg.Data.OculusID;
+                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
             }
             else
             {
                 PlayerIdManager.SetUsername("Unknown");
-
-                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.BeaconData = "Unknown";
+                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
 
                 MelonLogger.Error($"Failed to initalize Oculus username with error: {msg.error}\n{msg.error.Message}");
             }
-
-            RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.Start();
-
-            RiptideNetworkLayer.Layer.RiptideNetworkLayer.Beacon.BeaconData = Newtonsoft.Json.JsonConvert.SerializeObject(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(msg.Data.OculusID, 7777));
         }
         #endregion
 

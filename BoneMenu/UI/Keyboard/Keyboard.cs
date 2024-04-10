@@ -102,7 +102,7 @@ namespace RiptideNetworkLayer.BoneMenu
 
                         break;
                     }
-                    else
+                    else if (category.Elements.Count != 0)
                     {
                         __instance.MainPage.transform.Find("ScrollDown").gameObject.SetActive(true);
                         __instance.MainPage.transform.Find("ScrollUp").gameObject.SetActive(true);
