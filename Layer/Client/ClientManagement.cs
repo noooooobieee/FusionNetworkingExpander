@@ -110,7 +110,7 @@ namespace RiptideNetworkLayer.Layer
             {
                 title = "Connection Failed",
                 showTitleOnPopup = true,
-                message = $"Failed to connect to server! Is the server running and the host has their port forwarded?",
+                message = $"Failed to connect to server! Is the server running and the host has their port forwarded/open?",
                 isMenuItem = false,
                 isPopup = true,
                 popupLength = 5f,
@@ -149,7 +149,7 @@ namespace RiptideNetworkLayer.Layer
         /// </summary>
         public static void OnMessageReceived(object sender, MessageReceivedEventArgs message)
         {
-            FusionMessageHandler.ReadMessage(VoiceCompressor.DecompressVoiceData(message.Message.GetBytes()), false);
+            FusionMessageHandler.ReadMessage(message.Message.GetBytes(), false);
         }
     }
 }

@@ -13,8 +13,6 @@ namespace RiptideNetworkLayer.Utilities
     {
         internal static void Load()
         {
-            FusionLogger.Log("Loading netstandard");
-
             string sdkPath = PersistentData.GetPath($"netstandard.dll");
             File.WriteAllBytes(sdkPath, EmbeddedResource.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), ResourcePaths.netstandardPath));
 

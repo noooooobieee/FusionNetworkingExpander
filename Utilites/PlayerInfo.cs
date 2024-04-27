@@ -12,7 +12,7 @@ using Steamworks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace LabFusion.Riptide.Utilities
+namespace RiptideNetworkLayer.Utilities
 {
     /// <summary>
     /// Class for managing player info.
@@ -41,7 +41,7 @@ namespace LabFusion.Riptide.Utilities
 
                     PlayerIdManager.SetUsername(SteamClient.Name);
 
-                    RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+                    Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
 
                     SteamClient.Shutdown();
                 }
@@ -63,12 +63,12 @@ namespace LabFusion.Riptide.Utilities
             if (!msg.IsError)
             {
                 PlayerIdManager.SetUsername(msg.Data.OculusID);
-                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+                Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
             }
             else
             {
                 PlayerIdManager.SetUsername("Unknown");
-                RiptideNetworkLayer.Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.Layer.RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+                Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
 
                 MelonLogger.Error($"Failed to initalize Oculus username with error: {msg.error}\n{msg.error.Message}");
             }

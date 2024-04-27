@@ -43,7 +43,7 @@ namespace RiptideNetworkLayer.Layer
             if (CurrentServer.IsRunning)
                 CurrentServer.Stop();
 
-            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.BeaconData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), true));
 
             CurrentServer.Start(RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), 256, 0, false);
 
@@ -70,15 +70,21 @@ namespace RiptideNetworkLayer.Layer
         // Hooks
         public static void OnClientDisconnect(object sender, ServerDisconnectedEventArgs e)
         {
-            var id = e.Client.Id;
-            // Make sure the user hasn't previously disconnected
-            if (PlayerIdManager.HasPlayerId(id))
+            ushort id = e.Client.Id;
+            
+            if (id != PlayerIdManager.LocalLongId)
             {
-                // Update the mod so it knows this user has left
-                InternalServerHelpers.OnUserLeave(id);
+                if (PlayerIdManager.HasPlayerId(id))
+                {
+                    // Update the mod so it knows this user has left
+                    InternalServerHelpers.OnUserLeave(id);
 
-                // Send disconnect notif to everyone
-                ConnectionSender.SendDisconnect(id);
+                    // Send disconnect notif to everyone
+                    ConnectionSender.SendDisconnect(id);
+                }
+            } else
+            {
+                RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
             }
         }
 
@@ -95,7 +101,7 @@ namespace RiptideNetworkLayer.Layer
         /// <param name="args"></param>
         public static void OnMessageReceived(object sender, MessageReceivedEventArgs message)
         {
-            FusionMessageHandler.ReadMessage(VoiceCompressor.DecompressVoiceData(message.Message.GetBytes()), true);
+            FusionMessageHandler.ReadMessage(message.Message.GetBytes(), true);
         }
     }
 }

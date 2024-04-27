@@ -23,7 +23,7 @@ namespace RiptideNetworkLayer.Layer
         {
             Message riptideMessage = Message.Create(ConvertSendMode(channel), messageId);
 
-            var bytes = VoiceCompressor.CompressVoiceData(message.ToByteArray());
+            var bytes = message.ToByteArray();
 
             riptideMessage.AddBytes(bytes);
 

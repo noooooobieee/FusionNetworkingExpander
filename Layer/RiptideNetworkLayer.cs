@@ -72,7 +72,6 @@ namespace RiptideNetworkLayer.Layer
 #if DEBUG
             RiptideLogger.Initialize(MelonLogger.Msg, true);
 #endif
-            RiptidePreferences.OnInitializePreferences();
 
             Message.MaxPayloadSize = 1024 * 1024;
 
@@ -81,20 +80,13 @@ namespace RiptideNetworkLayer.Layer
             _voiceManager = new UnityVoiceManager();
             _voiceManager.Enable();
 
-            FusionLogger.Log("Initialized Riptide layer");
-        }
-
-        public override void OnLateInitializeLayer()
-        {
-            PlayerInfo.InitializeUsername();
-            PlayerInfo.InitializePlayerIPAddress();
-
-            InitLANDiscovery();
+#if DEBUG
+            MelonLogger.Msg("Initialized Riptide layer");
+#endif
         }
 
         private UdpClient client;
-        private int clientPort;
-        private void InitLANDiscovery()
+        internal void InitLANDiscovery()
         {
             int startPort = 9743;
             int endPort = 9999; // You can adjust the range as needed
@@ -103,8 +95,10 @@ namespace RiptideNetworkLayer.Layer
             {
                 try
                 {
-                    client = new UdpClient(port);
-                    clientPort = port;
+                    client = new(port)
+                    {
+                        EnableBroadcast = true
+                    };
                     break;
                 }
                 catch (SocketException)
@@ -112,14 +106,14 @@ namespace RiptideNetworkLayer.Layer
                 }
             }
 
-            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.BeaconData("RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW", RiptidePreferences.LocalServerSettings.ServerPort.GetValue()));
+            RiptideNetworkLayer.Instance.ChangeBroadcastingData(new RiptideNetworkLayer.LANData("RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW", RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
 
-            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-
-            Thread broadcastThread = new Thread(() =>
+            Thread broadcastThread = new(() =>
             {
-                UdpClient udpClient = new UdpClient();
-                udpClient.EnableBroadcast = true;
+                UdpClient udpClient = new()
+                {
+                    EnableBroadcast = true
+                };
 
                 while (true)
                 {
@@ -137,10 +131,10 @@ namespace RiptideNetworkLayer.Layer
             broadcastThread.Start();
         }
 
-        private object lockObject = new object();
+        private readonly object lockObject = new();
         private byte[] broadcastingBytes = null;
 
-        internal void ChangeBroadcastingData(BeaconData newValue)
+        internal void ChangeBroadcastingData(LANData newValue)
         {
             string json = Newtonsoft.Json.JsonConvert.SerializeObject(newValue);
 
@@ -166,6 +160,24 @@ namespace RiptideNetworkLayer.Layer
             MultiplayerHooking.OnPlayerJoin += OnPlayerJoin;
             MultiplayerHooking.OnPlayerLeave += OnPlayerLeave;
             MultiplayerHooking.OnDisconnect += OnDisconnect;
+        }
+
+        private void UnHookRiptideEvents()
+        {
+            // Riptide Hooks
+            CurrentServer.ClientDisconnected -= OnClientDisconnect;
+            CurrentServer.ClientConnected -= OnClientConnect;
+
+            CurrentClient.Disconnected -= OnDisconnectFromServer;
+            CurrentClient.ConnectionFailed -= OnConnectionFail;
+
+            CurrentServer.MessageReceived -= ServerManagement.OnMessageReceived;
+            CurrentClient.MessageReceived -= ClientManagement.OnMessageReceived;
+
+            // Add Server Hooks
+            MultiplayerHooking.OnPlayerJoin -= OnPlayerJoin;
+            MultiplayerHooking.OnPlayerLeave -= OnPlayerLeave;
+            MultiplayerHooking.OnDisconnect -= OnDisconnect;
         }
 
         private void OnPlayerJoin(PlayerId id)
@@ -245,30 +257,28 @@ namespace RiptideNetworkLayer.Layer
             category.Elements.Clear();
             category.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(category));
 
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, 0);
-            List<string> obtainedUsers = new List<string>();
+            List<string> obtainedUsers = [];
 
             bool hasMessages = false;
             do
             {
                 if (client.Available > 0)
                 {
+                    IPEndPoint endPoint = new(IPAddress.Broadcast, 0);
                     byte[] bytes = client.Receive(ref endPoint);
 
                     string message = Encoding.ASCII.GetString(bytes);
-                    FusionLogger.Log(message);
+                    MelonLogger.Msg($"Found Player: {message}");
 
-                    BeaconData data = Newtonsoft.Json.JsonConvert.DeserializeObject<BeaconData>(message);
+                    LANData data = Newtonsoft.Json.JsonConvert.DeserializeObject<LANData>(message);
 
                     // Handle message
-                    if (!obtainedUsers.Contains(data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW" && data.Username != PlayerIdManager.LocalUsername)
+                    if (!obtainedUsers.Contains(data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW" && data.Username != PlayerIdManager.LocalUsername && data.IsOpen)
                     {
                         obtainedUsers.Add(data.Username);
-
 #if DEBUG
-                        FusionLogger.Log($"Obtained server with username {data.Username} and port {data.Port}");
+                        MelonLogger.Msg($"Obtained server with username {data.Username}, IP {endPoint.Address} and port {data.Port}");
 #endif
-
                         category.CreateFunctionElement($"Join {data.Username}", Color.white, () => P2PJoinServer(endPoint.Address.ToString(), data.Port));
                     }
                 }
@@ -280,10 +290,11 @@ namespace RiptideNetworkLayer.Layer
             while (!hasMessages);
         }
 
-        public class BeaconData(string username, ushort port)
+        public class LANData(string username, ushort port, bool isOpen)
         {
             public string Username = username;
             public ushort Port = port;
+            public bool IsOpen = isOpen;
         }
 
         private void OnDislayServerCode()
@@ -425,7 +436,7 @@ namespace RiptideNetworkLayer.Layer
                 }
             } catch (Exception ex)
             {
-                FusionLogger.Error($"Failed to update Create Server text with reason: {ex.Message}");
+                MelonLogger.Error($"Failed to update Create Server text with reason: {ex.Message}");
             }
         }
 
@@ -497,6 +508,8 @@ namespace RiptideNetworkLayer.Layer
         public override void OnCleanupLayer()
         {
             Disconnect();
+
+            UnHookRiptideEvents();
 
             _voiceManager.ClearManager();
             _voiceManager.Disable();

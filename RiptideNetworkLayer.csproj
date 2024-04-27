@@ -97,8 +97,8 @@
     <Reference Include="JNISharp">
       <HintPath>..\..\..\..\..\Downloads\JNISharp-master\JNISharp\bin\Debug\net35\JNISharp.dll</HintPath>
     </Reference>
-    <Reference Include="LabFusion %281%29" Publicize="true">
-      <HintPath>..\..\..\..\..\Downloads\LabFusion (1).dll</HintPath>
+    <Reference Include="LabFusion">
+      <HintPath>..\BONELAB-Fusion\bin\Release\LabFusion.dll</HintPath>
     </Reference>
     <Reference Include="MelonLoader">
       <HintPath>..\HideAndSeek\Resources\Assemblies\MelonLoader.dll</HintPath>

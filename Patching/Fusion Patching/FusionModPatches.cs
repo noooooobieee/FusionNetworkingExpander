@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 using LabFusion;
+using LabFusion.Riptide.Utilities;
+using RiptideNetworkLayer.Preferences;
 using RiptideNetworkLayer.Utilities;
 
 namespace RiptideNetworkLayer.Patching
@@ -13,13 +15,25 @@ namespace RiptideNetworkLayer.Patching
     public static class FusionModPatches
     {
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(FusionMod.OnInitializeNetworking))]
+        [HarmonyPatch("OnInitializeNetworking")]
         public static void LoadNetworkLayer()
         {
             NetstandardLoader.Load();
             RiptideNetworkingLoader.Load();
 
             LabFusion.Network.NetworkLayer.RegisterLayersFromAssembly(System.Reflection.Assembly.GetExecutingAssembly());
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(FusionMod.OnInitializeMelon))]
+        public static void OnInitializeMelon()
+        {
+            RiptidePreferences.OnInitializePreferences();
+
+            PlayerInfo.InitializeUsername();
+            PlayerInfo.InitializePlayerIPAddress();
+
+            Layer.RiptideNetworkLayer.Instance.InitLANDiscovery();
         }
     }
 }

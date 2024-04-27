@@ -19,7 +19,7 @@ namespace RiptideNetworkLayer.BoneMenu
 {
     public class Keyboard
     {
-        public static List<Keyboard> Keyboards = new List<Keyboard>();
+        public static List<Keyboard> Keyboards = [];
 
         public Action<string> OnEnter;
         public MenuCategory Category;
@@ -34,17 +34,12 @@ namespace RiptideNetworkLayer.BoneMenu
         /// <returns></returns>
         public static Keyboard CreateKeyboard(BoneLib.BoneMenu.Elements.MenuCategory category, string name, Action<string> onEnter)
         {
-            Keyboard keyboard = new Keyboard();
+            Keyboard keyboard = new();
             Keyboards.Add(keyboard);
 
             MenuCategory keyboardCategory = category.CreateCategory(name, Color.cyan);
 
-            if (keyboardCategory != null)
-                keyboard.Category = keyboardCategory;
-            else
-            {
-                FusionLogger.Error($"Failed to create keyboard category for keyboard {name}");
-            }
+            keyboard.Category = keyboardCategory;
 
             keyboard.OnEnter = onEnter;
 
@@ -71,17 +66,7 @@ namespace RiptideNetworkLayer.BoneMenu
                         {
                             obj.KeyboardObject = GameObject.Instantiate(TideContentLoader.KeyboardPrefab);
                             obj.KeyboardObject.SetActive(true);
-                            if (obj.KeyboardObject == null)
-                            {
-                                FusionLogger.Error($"Keyboard is null!");
-                                return;
-                            }
                             var canvas = obj.KeyboardObject.transform.Find("Keyboard").Find("Canvas");
-                            if (canvas == null)
-                            {
-                                FusionLogger.Error($"Canvas is null!");
-                                return;
-                            }
 
                             var keyboardCanvas = canvas.gameObject.AddComponent<KeyboardCanvas>();
                             keyboardCanvas.Keyboard = obj;
@@ -108,7 +93,7 @@ namespace RiptideNetworkLayer.BoneMenu
                         __instance.MainPage.transform.Find("ScrollUp").gameObject.SetActive(true);
                         __instance.MainPage.transform.Find("Return").gameObject.SetActive(true);
 
-                        if (obj.KeyboardObject != null)
+                        if (obj.KeyboardObject)
                             obj.KeyboardObject.SetActive(false);
                     }
                 }

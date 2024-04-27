@@ -24,8 +24,8 @@ namespace RiptideNetworkLayer.BoneMenu
         private TMP_Text DisplayTMP;
         public Keyboard Keyboard;
 
-        List<Button> letters = new List<Button>();
-        List<Button> specials = new List<Button>();
+        readonly List<Button> letters = [];
+        readonly List<Button> specials = [];
 
         private void Awake()
         {
@@ -36,8 +36,6 @@ namespace RiptideNetworkLayer.BoneMenu
         public void SetupReferences()
         {
             DisplayTMP = transform.Find("Display").Find("Display Text").GetComponent<TMP_Text>();
-            if (DisplayTMP == null)
-                FusionLogger.Log("DisplayTMP is null!");
             foreach (var button in transform.GetComponentsInChildren<Button>())
             {
                 // Shut up I know this is dumb idc keyboards are dumb you are dumb die
@@ -313,12 +311,6 @@ namespace RiptideNetworkLayer.BoneMenu
 
         private void OnClickKey(string key)
         {
-            if (DisplayTMP == null)
-            {
-                FusionLogger.Error("DisplayTMP is null!");
-                return;
-            }
-
             if (isCaps)
                 key = key.ToUpper();
             else
@@ -356,8 +348,7 @@ namespace RiptideNetworkLayer.BoneMenu
         {
             BoneLib.BoneMenu.MenuManager.SelectCategory(Keyboard.Category.Parent);
 
-            if (Keyboard.OnEnter != null)
-                Keyboard.OnEnter.Invoke(DisplayTMP.text);
+            Keyboard.OnEnter?.Invoke(DisplayTMP.text);
 
             DisplayTMP.SetText("");
         }
