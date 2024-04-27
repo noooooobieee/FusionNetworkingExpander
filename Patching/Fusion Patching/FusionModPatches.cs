@@ -30,9 +30,6 @@ namespace RiptideNetworkLayer.Patching
         {
             RiptidePreferences.OnInitializePreferences();
 
-            PlayerInfo.InitializeUsername();
-            PlayerInfo.InitializePlayerIPAddress();
-
             Layer.RiptideNetworkLayer.Instance.InitLANDiscovery();
         }
     }

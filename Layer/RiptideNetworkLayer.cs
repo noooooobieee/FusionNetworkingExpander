@@ -39,6 +39,7 @@ using System.Threading;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using UnityEngine.InputSystem.Utilities;
 
 namespace RiptideNetworkLayer.Layer
 {
@@ -79,6 +80,9 @@ namespace RiptideNetworkLayer.Layer
 
             _voiceManager = new UnityVoiceManager();
             _voiceManager.Enable();
+
+            PlayerInfo.InitializeUsername();
+            PlayerInfo.InitializePlayerIPAddress();
 
 #if DEBUG
             MelonLogger.Msg("Initialized Riptide layer");
@@ -257,7 +261,7 @@ namespace RiptideNetworkLayer.Layer
             category.Elements.Clear();
             category.CreateFunctionElement("Search for LAN Servers", Color.green, () => StartLanDiscovery(category));
 
-            List<string> obtainedUsers = [];
+            List<LANData> obtainedUsers = [];
 
             bool hasMessages = false;
             do
@@ -268,18 +272,18 @@ namespace RiptideNetworkLayer.Layer
                     byte[] bytes = client.Receive(ref endPoint);
 
                     string message = Encoding.ASCII.GetString(bytes);
-                    MelonLogger.Msg($"Found Player: {message}");
 
                     LANData data = Newtonsoft.Json.JsonConvert.DeserializeObject<LANData>(message);
+                    data.IpAddress = endPoint.Address.ToString();
 
                     // Handle message
-                    if (!obtainedUsers.Contains(data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW" && data.Username != PlayerIdManager.LocalUsername && data.IsOpen)
+                    if (!obtainedUsers.Exists(x => x.Username == data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW")
                     {
-                        obtainedUsers.Add(data.Username);
-#if DEBUG
-                        MelonLogger.Msg($"Obtained server with username {data.Username}, IP {endPoint.Address} and port {data.Port}");
-#endif
-                        category.CreateFunctionElement($"Join {data.Username}", Color.white, () => P2PJoinServer(endPoint.Address.ToString(), data.Port));
+                        obtainedUsers.Add(data);
+                    } else if (obtainedUsers.Exists(x => x.Username == data.Username) && data.Username != "RIPTIDE_UNKNOWN_SERVER_RANDOMSHITASDADWDASDW")
+                    {
+                        obtainedUsers.Remove(obtainedUsers.Where(x => x.Username == data.Username).First());
+                        obtainedUsers.Add(data);
                     }
                 }
                 else
@@ -288,13 +292,24 @@ namespace RiptideNetworkLayer.Layer
                 }
             }
             while (!hasMessages);
+
+            foreach (var user in obtainedUsers)
+            {
+#if DEBUG
+                MelonLogger.Msg($"Obtained server with username {user.Username}, IP {user.IpAddress} and port {user.Port}");
+#endif
+                if (user.Username != PlayerIdManager.LocalUsername && user.IsOpen)
+                    category.CreateFunctionElement($"Join {user.Username}", Color.white, () => P2PJoinServer(user.IpAddress, user.Port));
+            }
         }
+
 
         public class LANData(string username, ushort port, bool isOpen)
         {
             public string Username = username;
             public ushort Port = port;
             public bool IsOpen = isOpen;
+            public string IpAddress { get; set; }
         }
 
         private void OnDislayServerCode()
