@@ -10,7 +10,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-namespace FusionNetworkAddons.Utilities
+namespace FNPlus.Utilities
 {
     /// <summary>Defines broadcast modes.</summary>
     public enum BroadcastMode

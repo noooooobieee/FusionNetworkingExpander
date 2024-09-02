@@ -1,7 +1,4 @@
-﻿using HarmonyLib;
-using LabFusion.Scene;
-
-namespace FusionNetworkAddons
+﻿namespace FNPlus
 {
     internal partial class Mod : MelonMod
     {
@@ -12,7 +9,7 @@ namespace FusionNetworkAddons
 
             NetworkLayer.RegisterLayersFromAssembly(Assembly.GetExecutingAssembly());
 
-            LoggerInstance.Msg("FusionNetworkAddons Initialized!");
+            LoggerInstance.Msg("FNPlus Initialized!");
         }
 
         public override void OnLateInitializeMelon()

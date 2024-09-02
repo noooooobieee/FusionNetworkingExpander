@@ -1,14 +1,12 @@
 ﻿using Il2CppWebSocketSharp;
 using Riptide.Utils;
-using System.Net;
 
-namespace FusionNetworkAddons.Network
+namespace FNPlus.Network
 {
     public class RiptideNetworkLayer : NetworkLayer
     {
         private Client _riptideClient = new("RIPTIDE CLIENT");
         private Server _riptideServer = new("RIPTIDE SERVER");
-        private LanDiscovery _riptideLanDiscovery = new(2224443, 7767);
 
         public override string Title => "Riptide";
 
@@ -155,15 +153,12 @@ namespace FusionNetworkAddons.Network
         {
             _riptideServer.Update();
             _riptideClient.Update();
-            _riptideLanDiscovery.Tick();
         }
 
         public override void OnUpdateLobby()
         {
             if (!IsClient)
-            {
-                _riptideLanDiscovery.SendBroadcast();
-            }
+                PlayerIdManager.SetUsername(PlayerInfo.Username);
 
             UpdateServerCreationText();
         }
@@ -197,6 +192,7 @@ namespace FusionNetworkAddons.Network
             {
                 _riptideClient.Connected -= OnConnect;
 
+                PlayerIdManager.SetLongId(_riptideClient.Id);
                 InternalServerHelpers.OnStartServer();
 
                 OnUpdateLobby();
@@ -212,7 +208,17 @@ namespace FusionNetworkAddons.Network
             else
                 ipAddress = serverCode;
 
+            _riptideClient.Connected += OnConnect;
             _riptideClient.Connect($"{ipAddress}:7777");
+
+            void OnConnect(object sender, EventArgs args)
+            {
+                _riptideClient.Connected -= OnConnect;
+
+                PlayerIdManager.SetLongId(_riptideClient.Id);
+                InternalServerHelpers.OnJoinServer();
+                OnUpdateLobby();
+            }
         }
 
         public override void Disconnect(string reason = "")

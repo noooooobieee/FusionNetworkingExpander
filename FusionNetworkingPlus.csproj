@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
-    <AssemblyName>FusionNetworkAddons</AssemblyName>
+    <AssemblyName>FNPlus</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
@@ -10,7 +10,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
-    <RootNamespace>FusionNetworkAddons</RootNamespace>
+    <RootNamespace>FNPlus</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="packages\**" />
@@ -124,6 +124,9 @@
 		</Reference>
 		<Reference Include="Newtonsoft.Json">
 			<HintPath>$(BONELAB_DIR)\MelonLoader\Managed\Newtonsoft.Json.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.ResourceManager">
+			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Unity.ResourceManager.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.RenderPipelines.Core.Runtime">
 			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>

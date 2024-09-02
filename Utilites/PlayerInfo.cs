@@ -1,15 +1,15 @@
-﻿using UnityEngine;
-using UnityEngine.Networking;
-
+﻿using Il2CppCysharp.Threading.Tasks;
 using Il2CppOculus.Platform;
 using Il2CppOculus.Platform.Models;
-
+using Il2CppSLZ.Marrow.PuppetMasta;
+using Microsoft.VisualBasic;
 using Steamworks;
-
-using LabFusion.Player;
+using System.Collections;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
-namespace FusionNetworkAddons.Utilities
+namespace FNPlus.Utilities
 {
     /// <summary>
     /// Class for managing player info.
@@ -21,8 +21,8 @@ namespace FusionNetworkAddons.Utilities
 
         internal static void Initialize()
         {
-            InitializePlayerIPAddress();
-            InitializeUsername();
+            PlayerIpAddress = GetPlayerIPAddress();
+            Username = GetPlayerUsername();
 
 #if DEBUG
             MelonLogger.Msg($"Player IP Address: {PlayerIpAddress}");
@@ -30,44 +30,39 @@ namespace FusionNetworkAddons.Utilities
 #endif
         }
 
-        private static void InitializeUsername()
+        private static TaskCompletionSource<string> _usernameTaskSource = new();
+        private static string GetPlayerUsername()
         {
+            // Steam
             if (Path.GetFileName(UnityEngine.Application.dataPath) == "BONELAB_Steam_Windows64_Data")
             {
                 if (!SteamClient.IsValid)
                     SteamClient.Init(250820, false);
 
-                Username = SteamClient.Name;
+                string username = SteamClient.Name;
                 SteamClient.Shutdown();
-                return;
+
+                return username;
             }
 
+            // Oculus
             if (!HelperMethods.IsAndroid())
-            {
-
                 Core.Initialize("5088709007839657");
-                Users.GetLoggedInUser().OnComplete((Message<User>.Callback)GetLoggedInUserCallback);
-            }
             else
-            {
                 Core.Initialize("4215734068529064");
-                Users.GetLoggedInUser().OnComplete((Message<User>.Callback)GetLoggedInUserCallback);
+
+            var request = Users.GetLoggedInUser();
+
+            request.OnComplete((Message<User>.Callback)OnComplete);
+            void OnComplete(Message<User> msg)
+            {
+                Username = msg.Data.OculusID;
             }
+
+            return "Riptide Enjoyer";
         }
 
-        private static void GetLoggedInUserCallback(Message<User> msg)
-        {
-            if (!msg.IsError)
-            {
-                Username = msg.Data.OculusID;            
-            }
-            else
-            {
-                MelonLogger.Error($"Failed to initalize Il2CppOculus username with error: {msg.error}\n{msg.error.Message}");
-            }
-        }
-
-        private static void InitializePlayerIPAddress()
+        private static string GetPlayerIPAddress()
         {
             try
             {
@@ -90,12 +85,14 @@ namespace FusionNetworkAddons.Utilities
                 var response = client.Send(request);
                 string responseString = response.Content.ReadAsStringAsync().Result;
 
-                PlayerIpAddress = responseString;
+                return responseString;
             }
             catch (Exception e)
             {
                 MelonLogger.Error($"Error when fetching IP address:");
                 MelonLogger.Error(e);
+
+                return string.Empty;
             }
         }
     }

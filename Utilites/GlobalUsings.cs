@@ -24,5 +24,5 @@ global using LabFusion.Utilities;
 global using LabFusion.Voice;
 global using LabFusion.Voice.Unity;
 
-global using FusionNetworkAddons;
-global using FusionNetworkAddons.Utilities;
+global using FNPlus;
+global using FNPlus.Utilities;

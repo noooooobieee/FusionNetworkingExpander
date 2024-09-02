@@ -1,4 +1,4 @@
-﻿namespace FusionNetworkAddons.Utilities
+﻿namespace FNPlus.Utilities
 {
     internal class NetStandardLoader
     {
