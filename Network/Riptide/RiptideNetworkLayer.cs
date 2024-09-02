@@ -56,11 +56,12 @@ namespace FNPlus.Network
         private FunctionElement _serverCreationElement;
         private void CreateServerInfoMenu(Page serverInfoCategory)
         {
-            _serverCreationElement = serverInfoCategory.CreateFunction("Start Server", Color.white, OnClickServerCreation);
+            _serverCreationElement = serverInfoCategory.CreateFunction("Start Server", Color.green, OnClickServerCreation);
 
-            serverInfoCategory.CreateFunction("Show Server Code", Color.white, () => FusionNotifier.Send(new FusionNotification()
+            serverInfoCategory.CreateFunction("Popup Server Code", Color.white, () => FusionNotifier.Send(new FusionNotification()
             {
                 showTitleOnPopup = false,
+                popupLength = 5f,
                 message = $"Server Code: {IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress)}",
             }));
             serverInfoCategory.CreateFunction("Copy Server Code", Color.white, () => GUIUtility.systemCopyBuffer = IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress));
@@ -83,7 +84,7 @@ namespace FNPlus.Network
         private string _serverCode = "";
         private void CreateManualJoiningMenu(Page manualJoiningCategory)
         {
-            manualJoiningCategory.CreateFunction("Join Server", Color.white, OnClickJoinServer);
+            manualJoiningCategory.CreateFunction("Join Server", Color.green, OnClickJoinServer);
 
             _serverCodeElement = manualJoiningCategory.CreateString($"Server Code\nor\nServer IP", Color.white, _serverCode, (value) => _serverCode = value);
         }
@@ -186,7 +187,7 @@ namespace FNPlus.Network
                 _serverCreationElement.ElementName = "Disconnect";
             } else
             {
-                _serverCreationElement.ElementColor = Color.white;
+                _serverCreationElement.ElementColor = Color.green;
                 _serverCreationElement.ElementName = "Start Server";
             }
         }

@@ -1,45 +1,46 @@
-﻿namespace FNPlus.Utilities
+﻿using BoneLib.BoneMenu.UI;
+
+namespace FNPlus.Utilities
 {
     public class ServerListing
     {
         public string ServerName { get; private set; } = "";
-        public string ServerCode { get; private set; } = "";
+        public string ServerID { get; private set; } = "";
 
         private static List<ServerListing> _serverListings = new();
         private static string _serverName = "Unnamed";
-        private static string _serverCode = "";
+        private static string _serverID = "";
         public static void CreateServerListingMenu(NetworkLayer layer, Page page, string serverIdName, Action<string> onJoin)
         {
-            var createCategory = page.CreatePage("Create Listing", Color.gray);
+            var createCategory = page.CreatePage("Create Listing", Color.cyan);
             var nameElement = createCategory.CreateString("Server Name", Color.white, _serverName, (value) => _serverName = value);
-            var codeElement = createCategory.CreateString(serverIdName, Color.white, _serverCode, (value) => _serverCode = value);
+            var codeElement = createCategory.CreateString(serverIdName, Color.white, _serverID, (value) => _serverID = value);
 
             page.CreateFunction("Refresh Listings", Color.yellow, () => RefreshServerListingMenu(layer, page, serverIdName, onJoin));
 
-            createCategory.CreateFunction("Create Listing", Color.white, () =>
+            createCategory.CreateFunction("Add Listing", Color.green, () =>
             {
-                _serverListings.Add(new ServerListing(_serverName, _serverCode));
+                _serverListings.Add(new ServerListing(_serverName, _serverID));
                 SaveServerListings(layer, _serverListings);
 
                 _serverName = "Unnamed";
-                _serverCode = "";
+                _serverID = "";
 
                 RefreshServerListingMenu(layer, page, serverIdName, onJoin);
             });
+
+            _serverListings = LoadServerListings(layer);
+            foreach (var listing in _serverListings)
+            {
+                CreateServerListing(page, layer, listing, serverIdName, onJoin);
+            }
         }
 
         private static void RefreshServerListingMenu(NetworkLayer layer, Page page, string serverIdName, Action<string> onJoin)
         {
             page.RemoveAll();
 
-            _serverListings = LoadServerListings(layer);
-
             CreateServerListingMenu(layer, page, serverIdName, onJoin);
-
-            foreach (var listing in _serverListings)
-            {
-                CreateServerListing(page, layer, listing, serverIdName, onJoin);
-            }
 
             Menu.OpenPage(page);
         }
@@ -47,7 +48,21 @@
         private static void CreateServerListing(Page page, NetworkLayer layer, ServerListing listing, string serverIdName, Action<string> onJoin)
         {
             var serverListingCategory = page.CreatePage(listing.ServerName, Color.white);
-            serverListingCategory.CreateFunction("Join Server", Color.white, () => onJoin(listing.ServerCode));
+            serverListingCategory.CreateFunction("Join Server", Color.green, () => onJoin(listing.ServerID));
+
+            var editListingCategory = serverListingCategory.CreatePage("Edit Listing", Color.gray);
+            editListingCategory.CreateString("Server Name", Color.white, listing.ServerName, (value) => 
+            {
+                listing.ServerName = value; 
+                serverListingCategory.Name = value;
+                SaveServerListings(layer, _serverListings);
+            });
+            editListingCategory.CreateString(serverIdName, Color.white, listing.ServerID, (value) => 
+            {
+                listing.ServerID = value; 
+                SaveServerListings(layer, _serverListings);
+            });
+
             serverListingCategory.CreateFunction("Remove Listing", Color.red, () =>
             {
                 _serverListings.Remove(listing);
@@ -64,13 +79,19 @@
 
         public static List<ServerListing> LoadServerListings(NetworkLayer layer)
         {
-            return DataSaver.ReadJson<List<ServerListing>>($"FNPlus/{layer.Title}/ServerListings.json");
+            List<ServerListing> listings;
+            listings = DataSaver.ReadJson<List<ServerListing>>($"FNPlus/{layer.Title}/ServerListings.json");
+
+            if (listings == null)
+                listings = new List<ServerListing>();   
+
+            return listings;
         }
 
-        public ServerListing(string serverName, string serverCode)
+        public ServerListing(string serverName, string serverID)
         {
             ServerName = serverName;
-            ServerCode = serverCode;
+            ServerID = serverID;
         }
     }
 }
