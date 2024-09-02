@@ -6,6 +6,14 @@
 ### - Riptide
 + Server authoritative P2P networking for lower latency and standalone use!
 
-## Planeed/Future Possible Network Layers:
+## Planned/Future Possible Network Layers:
 ### - Nakama
++ Self hosted, web-socket based networking popular for its use in competitive games.
 ### - EOS
++ Free, relay based networking similar to Steamworks but available on all platforms. (though quite complicated to implement)
+
+## Credits
+### RiptideNetworking
++ Lightweight networking library with lower level transports.
++ Liscensed under the MIT liscense
++ Github Repo: [https://github.com/RiptideNetworking/Riptide]
