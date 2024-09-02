@@ -1,13 +1,10 @@
-﻿using Il2CppCysharp.Threading.Tasks;
+﻿using System.Net.Http;
+using System.Threading.Tasks;
+
 using Il2CppOculus.Platform;
 using Il2CppOculus.Platform.Models;
-using Il2CppSLZ.Marrow.PuppetMasta;
-using Microsoft.VisualBasic;
+
 using Steamworks;
-using System.Collections;
-using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace FNPlus.Utilities
 {
@@ -59,7 +56,7 @@ namespace FNPlus.Utilities
                 Username = msg.Data.OculusID;
             }
 
-            return "Riptide Enjoyer";
+            return "Unknown";
         }
 
         private static string GetPlayerIPAddress()

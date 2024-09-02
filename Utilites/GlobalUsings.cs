@@ -6,6 +6,7 @@ global using System.Reflection;
 global using System.Runtime.InteropServices;
 
 global using MelonLoader;
+global using MelonLoader.Utils;
 
 global using UnityEngine;
 

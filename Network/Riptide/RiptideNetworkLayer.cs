@@ -19,6 +19,10 @@ namespace FNPlus.Network
         public override bool CheckSupported() => true;
         public override bool CheckValidation() => true;
 
+        // Riptide doesn't really have a way to add these features out of the box...
+        public override string GetUsername(ulong userId) => "Riptide Enjoyer";
+        public override bool IsFriend(ulong userId) => false;
+
         public override void OnInitializeLayer()
         {
             HookRiptideEvents();
@@ -33,6 +37,7 @@ namespace FNPlus.Network
 
         private Page _serverInfoCategory;
         private Page _manualJoiningCategory;
+        private Page _serverListingCategory;
         private void OnFillMatchmakingPage(Page page)
         {
             // Server making
@@ -42,6 +47,10 @@ namespace FNPlus.Network
             // Manual joining
             _manualJoiningCategory = page.CreatePage("Manual Joining", Color.white);
             CreateManualJoiningMenu(_manualJoiningCategory);
+
+            // Server listings
+            _serverListingCategory = page.CreatePage("Server Listings", Color.white);
+            ServerListing.CreateServerListingMenu(this, _serverListingCategory, $"Server Code\nor\nServer IP", JoinServer);
         }
 
         private FunctionElement _serverCreationElement;
@@ -74,9 +83,9 @@ namespace FNPlus.Network
         private string _serverCode = "";
         private void CreateManualJoiningMenu(Page manualJoiningCategory)
         {
-            manualJoiningCategory.CreateFunction("Join Server", Color.white, () => OnClickJoinServer());
+            manualJoiningCategory.CreateFunction("Join Server", Color.white, OnClickJoinServer);
 
-            _serverCodeElement = manualJoiningCategory.CreateString($"Server Code", Color.white, _serverCode, (value) => _serverCode = value);
+            _serverCodeElement = manualJoiningCategory.CreateString($"Server Code\nor\nServer IP", Color.white, _serverCode, (value) => _serverCode = value);
         }
 
         private void OnClickJoinServer()
@@ -86,7 +95,8 @@ namespace FNPlus.Network
                 FusionNotifier.Send(new FusionNotification()
                 {
                     showTitleOnPopup = false,
-                    message = "Please enter a server code to join.",
+                    type = NotificationType.WARNING,
+                    message = "Please enter a server code or IP address to join.",
                 });
             }
 
