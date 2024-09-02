@@ -1,4 +1,4 @@
-# Fusion Networking Addons
+# Fusion Networking Plus
 ## About
 ### A mod for BONELAB Fusion adding more NetworkLayer options.
 
