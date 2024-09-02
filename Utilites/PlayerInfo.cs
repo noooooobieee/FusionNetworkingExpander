@@ -1,59 +1,56 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using BoneLib;
-using LabFusion.Representation;
-using LabFusion.Utilities;
-using MelonLoader;
-using Oculus.Platform;
-using Oculus.Platform.Models;
-using RiptideNetworkLayer.Preferences;
-using Steamworks;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Networking;
 
-namespace RiptideNetworkLayer.Utilities
+using Il2CppOculus.Platform;
+using Il2CppOculus.Platform.Models;
+
+using Steamworks;
+
+using LabFusion.Player;
+using System.Net.Http;
+
+namespace FusionNetworkAddons.Utilities
 {
     /// <summary>
     /// Class for managing player info.
     /// </summary>
     public class PlayerInfo
     {
-        /// <summary>
-        /// Last IP obtained from Ipify. Null if failed to obtain.
-        /// </summary>
-        internal static string PlayerIpAddress;
+        public static string PlayerIpAddress { get; private set; } = "Unknown";
+        public static string Username { get; private set; } = "Unknown";
 
-        #region USERNAME
-        /// <summary>
-        /// Inits Oculus or Steam based on platform, then sets the player's username.
-        /// </summary>
-        public static void InitializeUsername()
+        internal static void Initialize()
         {
+            InitializePlayerIPAddress();
+            InitializeUsername();
+
+#if DEBUG
+            MelonLogger.Msg($"Player IP Address: {PlayerIpAddress}");
+            MelonLogger.Msg($"Username: {Username}");
+#endif
+        }
+
+        private static void InitializeUsername()
+        {
+            if (Path.GetFileName(UnityEngine.Application.dataPath) == "BONELAB_Steam_Windows64_Data")
+            {
+                if (!SteamClient.IsValid)
+                    SteamClient.Init(250820, false);
+
+                Username = SteamClient.Name;
+                SteamClient.Shutdown();
+                return;
+            }
+
             if (!HelperMethods.IsAndroid())
             {
-                if (Path.GetFileName(UnityEngine.Application.dataPath) == "BONELAB_Steam_Windows64_Data")
-                {
-                    if (!SteamClient.IsValid)
-                    {
-                        SteamClient.Init(250820u, asyncCallbacks: false);
-                    }
 
-                    PlayerIdManager.SetUsername(SteamClient.Name);
-
-                    Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
-
-                    SteamClient.Shutdown();
-                }
-                else
-                {
-                    Oculus.Platform.Core.Initialize("5088709007839657");
-                    Users.GetLoggedInUser().OnComplete((Message<User>.Callback)GetLoggedInUserCallback);
-                }
+                Core.Initialize("5088709007839657");
+                Users.GetLoggedInUser().OnComplete((Message<User>.Callback)GetLoggedInUserCallback);
             }
             else
             {
-                Oculus.Platform.Core.Initialize("4215734068529064");
+                Core.Initialize("4215734068529064");
                 Users.GetLoggedInUser().OnComplete((Message<User>.Callback)GetLoggedInUserCallback);
             }
         }
@@ -62,50 +59,44 @@ namespace RiptideNetworkLayer.Utilities
         {
             if (!msg.IsError)
             {
-                PlayerIdManager.SetUsername(msg.Data.OculusID);
-                Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
+                Username = msg.Data.OculusID;            
             }
             else
             {
-                PlayerIdManager.SetUsername("Unknown");
-                Layer.RiptideNetworkLayer.Instance.ChangeBroadcastingData(new Layer.RiptideNetworkLayer.LANData(PlayerIdManager.LocalUsername, RiptidePreferences.LocalServerSettings.ServerPort.GetValue(), false));
-
-                MelonLogger.Error($"Failed to initalize Oculus username with error: {msg.error}\n{msg.error.Message}");
+                MelonLogger.Error($"Failed to initalize Il2CppOculus username with error: {msg.error}\n{msg.error.Message}");
             }
         }
-        #endregion
 
-        #region PLAYERIP
-        /// <summary>
-        /// Requests the player's IP address from Ipify, then sets the PlayerIpAddress variable.
-        /// </summary>
-        internal static void InitializePlayerIPAddress()
+        private static void InitializePlayerIPAddress()
         {
-            string ip = "";
             try
             {
                 string link = "https://api.ipify.org";
-                UnityWebRequest httpWebRequest = UnityWebRequest.Get(link);
-                var requestSent = httpWebRequest.SendWebRequest();
 
-                requestSent.m_completeCallback += new System.Action<AsyncOperation>((op) =>
+                HttpClientHandler handler = new()
                 {
-                    ip = httpWebRequest.downloadHandler.text;
-                    if (httpWebRequest.result == UnityWebRequest.Result.ConnectionError || httpWebRequest.result == UnityWebRequest.Result.ProtocolError)
-                    {
-                        MelonLogger.Error(httpWebRequest.error);
-                        PlayerIpAddress = ip;
-                    }
-                    PlayerIpAddress = ip;
-                });
+                    ClientCertificateOptions = ClientCertificateOption.Manual,
+                    ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
+                };
 
+                HttpClient client = new(handler);
+
+                HttpRequestMessage request = new()
+                {
+                    RequestUri = new Uri(link),
+                    Method = HttpMethod.Get,
+                };
+
+                var response = client.Send(request);
+                string responseString = response.Content.ReadAsStringAsync().Result;
+
+                PlayerIpAddress = responseString;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 MelonLogger.Error($"Error when fetching IP address:");
                 MelonLogger.Error(e);
             }
         }
-        #endregion
     }
 }

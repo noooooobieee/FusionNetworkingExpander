@@ -1,1 +1,0 @@
-v.vertex.xyz = MeshFlareBillboard(v.vertex.xyz);

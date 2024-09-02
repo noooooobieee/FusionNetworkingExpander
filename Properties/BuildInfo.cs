@@ -1,9 +1,9 @@
-﻿namespace RiptideNetworkLayer
+﻿namespace FusionNetworkAddons
 {
-    internal partial class Main
+    internal partial class Mod
     {
-        internal const string Name = "RiptideNetworkLayer";
-        internal const string Description = "A network layer for BONELAB Fusion that allows direct Client to Server networking!";
+        internal const string Name = "FusionNetworkAddons";
+        internal const string Description = "An addon for Fusion offering new Networking options!";
         internal const string Author = "KitchenBoy";
         internal const string Company = "SilverWare";
         internal const string Version = "1.0.0";
