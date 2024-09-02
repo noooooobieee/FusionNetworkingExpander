@@ -62,6 +62,7 @@ namespace FNPlus.Network
             {
                 showTitleOnPopup = false,
                 popupLength = 5f,
+                isMenuItem = false,
                 message = $"Server Code: {IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress)}",
             }));
             serverInfoCategory.CreateFunction("Copy Server Code", Color.white, () => GUIUtility.systemCopyBuffer = IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress));
@@ -97,6 +98,7 @@ namespace FNPlus.Network
                 {
                     showTitleOnPopup = false,
                     type = NotificationType.WARNING,
+                    isMenuItem = false,
                     message = "Please enter a server code or IP address to join.",
                 });
             }

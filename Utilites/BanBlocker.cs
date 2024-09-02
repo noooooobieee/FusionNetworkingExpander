@@ -19,6 +19,7 @@ namespace FNPlus.Utilites
                 {
                     showTitleOnPopup = false,
                     type = NotificationType.WARNING,
+                    isMenuItem = false,
                     message = "You cannot ban players on this Network Layer.",
                 });
                 return false;
