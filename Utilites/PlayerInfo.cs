@@ -37,13 +37,14 @@ namespace FNPlus.Utilities
                     SteamClient.Init(250820, false);
 
                 string username = SteamClient.Name;
+                LocalPlayer.Username = username;
                 SteamClient.Shutdown();
 
                 return username;
             }
 
             // Oculus
-            if (!HelperMethods.IsAndroid())
+            if (!PlatformHelper.IsAndroid)
                 Core.Initialize("5088709007839657");
             else
                 Core.Initialize("4215734068529064");
@@ -54,6 +55,7 @@ namespace FNPlus.Utilities
             void OnComplete(Message<User> msg)
             {
                 Username = msg.Data.OculusID;
+                LocalPlayer.Username = Username;
             }
 
             return "Unknown";

@@ -1,20 +1,22 @@
-﻿using Il2CppWebSocketSharp;
-using Riptide.Utils;
+﻿using FNPlus.Network.Riptide;
+using LabFusion.Network;
+using Riptide;
+using Steamworks;
+using System.Collections.Concurrent;
+using System.Net;
+using UnityEngine.Rendering;
 
 namespace FNPlus.Network
 {
     public class RiptideNetworkLayer : NetworkLayer
     {
-        private Client _riptideClient = new("RIPTIDE CLIENT");
-        private Server _riptideServer = new("RIPTIDE SERVER");
-
         public override string Title => "Riptide";
 
         private IVoiceManager _voiceManager = null;
         public override IVoiceManager VoiceManager => _voiceManager;
 
-        public override bool IsServer => _riptideServer.IsRunning;
-        public override bool IsClient => _riptideClient.IsConnected;
+        public override bool IsServer => RiptideThreader.IsServerRunning;
+        public override bool IsClient => RiptideThreader.IsClientConnected;
 
         public override bool CheckSupported() => true;
         public override bool CheckValidation() => true;
@@ -23,133 +25,79 @@ namespace FNPlus.Network
         public override string GetUsername(ulong userId) => "Riptide Enjoyer";
         public override bool IsFriend(ulong userId) => false;
 
+        public override void LogIn()
+        {
+            InvokeLoggedInEvent();
+        }
+
+        public override void LogOut() 
+        {
+            InvokeLoggedOutEvent(); 
+        }
+
         public override void OnInitializeLayer()
         {
-            HookRiptideEvents();
+            RiptideThreader.StartThread();
 
-#if DEBUG
-            RiptideLogger.Initialize(MelonLogger.Msg, true);
-#endif
+            HookRiptideEvents();
 
             _voiceManager = new UnityVoiceManager();
             _voiceManager.Enable();
         }
 
-        private Page _serverInfoCategory;
-        private Page _manualJoiningCategory;
-        private Page _serverListingCategory;
-        private void OnFillMatchmakingPage(Page page)
+        public override void OnDeinitializeLayer()
         {
-            // Server making
-            _serverInfoCategory = page.CreatePage("Server Info", Color.white);
-            CreateServerInfoMenu(_serverInfoCategory);
+            _voiceManager.Disable();
+            _voiceManager = null;
 
-            // Manual joining
-            _manualJoiningCategory = page.CreatePage("Manual Joining", Color.white);
-            CreateManualJoiningMenu(_manualJoiningCategory);
+            Disconnect();
 
-            // Server listings
-            _serverListingCategory = page.CreatePage("Server Listings", Color.white);
-            ServerListing.CreateServerListingMenu(this, _serverListingCategory, $"Server Code\nor\nServer IP", JoinServer);
-        }
+            RiptideThreader.KillThread();
 
-        private FunctionElement _serverCreationElement;
-        private void CreateServerInfoMenu(Page serverInfoCategory)
-        {
-            _serverCreationElement = serverInfoCategory.CreateFunction("Start Server", Color.green, OnClickServerCreation);
-
-            serverInfoCategory.CreateFunction("Popup Server Code", Color.white, () => FusionNotifier.Send(new FusionNotification()
-            {
-                showTitleOnPopup = false,
-                popupLength = 5f,
-                isMenuItem = false,
-                message = $"Server Code: {IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress)}",
-            }));
-            serverInfoCategory.CreateFunction("Copy Server Code", Color.white, () => GUIUtility.systemCopyBuffer = IPExtensions.EncodeIpAddress(PlayerInfo.PlayerIpAddress));
-
-            BoneMenuCreator.PopulateServerInfo(serverInfoCategory);
-        }
-
-        private void OnClickServerCreation()
-        {
-            if (_riptideClient.IsConnecting)
-                return;
-
-            if (IsClient)
-                Disconnect();
-            else
-                StartServer();
-        }
-
-        private StringElement _serverCodeElement;
-        private string _serverCode = "";
-        private void CreateManualJoiningMenu(Page manualJoiningCategory)
-        {
-            manualJoiningCategory.CreateFunction("Join Server", Color.green, OnClickJoinServer);
-
-            _serverCodeElement = manualJoiningCategory.CreateString($"Server Code\nor\nServer IP", Color.white, _serverCode, (value) => _serverCode = value);
-        }
-
-        private void OnClickJoinServer()
-        {
-            if (_serverCode.IsNullOrEmpty())
-            {
-                FusionNotifier.Send(new FusionNotification()
-                {
-                    showTitleOnPopup = false,
-                    type = NotificationType.WARNING,
-                    isMenuItem = false,
-                    message = "Please enter a server code or IP address to join.",
-                });
-            }
-
-            if (IsClient)
-                Disconnect();
-
-            JoinServer(_serverCode);
+            UnhookRiptideEvents();
         }
 
         private void HookRiptideEvents()
         {
             // Add server hooks
-            MultiplayerHooking.OnMainSceneInitialized += OnUpdateLobby;
-            GamemodeManager.OnGamemodeChanged += (gameMode) => OnUpdateLobby();
             MultiplayerHooking.OnPlayerJoin += OnPlayerJoin;
             MultiplayerHooking.OnPlayerLeave += OnPlayerLeave;
-            MultiplayerHooking.OnServerSettingsChanged += OnUpdateLobby;
             MultiplayerHooking.OnDisconnect += OnDisconnect;
 
-            // Add BoneMenu hooks
-            MatchmakingCreator.OnFillMatchmakingPage += OnFillMatchmakingPage;
+            LobbyInfoManager.OnLobbyInfoChanged += OnUpdateLobby;
         }
 
         private void UnhookRiptideEvents()
         {
-            // Add server hooks
-            MultiplayerHooking.OnMainSceneInitialized -= OnUpdateLobby;
-            GamemodeManager.OnGamemodeChanged -= (gameMode) => OnUpdateLobby();
+            // Remove server hooks
             MultiplayerHooking.OnPlayerJoin -= OnPlayerJoin;
             MultiplayerHooking.OnPlayerLeave -= OnPlayerLeave;
-            MultiplayerHooking.OnServerSettingsChanged -= OnUpdateLobby;
             MultiplayerHooking.OnDisconnect -= OnDisconnect;
 
-            // Add BoneMenu hooks
-            MatchmakingCreator.OnFillMatchmakingPage -= OnFillMatchmakingPage;
+            LobbyInfoManager.OnLobbyInfoChanged -= OnUpdateLobby;
         }
 
         private void OnPlayerJoin(PlayerId id)
         {
-            if (!id.IsOwner)
-                VoiceManager.GetSpeaker(id);
+            if (VoiceManager == null)
+            {
+                return;
+            }
 
-            OnUpdateLobby();
+            if (!id.IsMe)
+            {
+                VoiceManager.GetSpeaker(id);
+            }
         }
 
         private void OnPlayerLeave(PlayerId id)
         {
-            VoiceManager.RemoveSpeaker(id);
+            if (VoiceManager == null)
+            {
+                return;
+            }
 
-            OnUpdateLobby();
+            VoiceManager.RemoveSpeaker(id);
         }
 
         private void OnDisconnect()
@@ -157,96 +105,66 @@ namespace FNPlus.Network
             VoiceManager.ClearManager();
         }
 
-        public override void OnCleanupLayer()
-        {
-            UnhookRiptideEvents();
-        }
-
+        internal static readonly ConcurrentQueue<Tuple<byte[], bool>> MessageQueue = new();
         public override void OnUpdateLayer()
         {
-            _riptideServer.Update();
-            _riptideClient.Update();
+            if (MessageQueue.Count > 0 && MessageQueue.TryDequeue(out Tuple<byte[], bool> messageTuple))
+            {
+                byte[] bytes = messageTuple.Item1;
+                bool isServerHandled = messageTuple.Item2;
+
+                FusionMessageHandler.ReadMessage(bytes, isServerHandled);
+            }
         }
 
-        public override void OnUpdateLobby()
+        public void OnUpdateLobby()
         {
             if (!IsClient)
-                PlayerIdManager.SetUsername(PlayerInfo.Username);
-
-            UpdateServerCreationText();
-        }
-
-        private void UpdateServerCreationText()
-        {
-            if (IsServer)
-            {
-                _serverCreationElement.ElementColor = Color.red;
-                _serverCreationElement.ElementName = "Stop Server";
-            }
-            else if (IsClient)
-            {
-                _serverCreationElement.ElementColor = Color.red;
-                _serverCreationElement.ElementName = "Disconnect";
-            } else
-            {
-                _serverCreationElement.ElementColor = Color.green;
-                _serverCreationElement.ElementName = "Start Server";
-            }
+                LocalPlayer.Username = Utilities.PlayerInfo.Username;
         }
 
         public override void StartServer()
         {
-            _riptideServer.Start(7777, 256);
-
-            _riptideClient.Connected += OnConnect;
-            _riptideClient.Connect("127.0.0.1:7777");
-
-            void OnConnect(object sender, EventArgs args)
-            {
-                _riptideClient.Connected -= OnConnect;
-
-                PlayerIdManager.SetLongId(_riptideClient.Id);
-                InternalServerHelpers.OnStartServer();
-
-                OnUpdateLobby();
-            }
-        }
-
-        public void JoinServer(string serverCode)
-        {
-            string ipAddress;
-
-            if (!serverCode.Contains('.'))
-                ipAddress = IPExtensions.DecodeIpAddress(serverCode);
-            else
-                ipAddress = serverCode;
-
-            _riptideClient.Connected += OnConnect;
-            _riptideClient.Connect($"{ipAddress}:7777");
-
-            void OnConnect(object sender, EventArgs args)
-            {
-                _riptideClient.Connected -= OnConnect;
-
-                PlayerIdManager.SetLongId(_riptideClient.Id);
-                InternalServerHelpers.OnJoinServer();
-                OnUpdateLobby();
-            }
+            RiptideThreader.StartServer();
         }
 
         public override void Disconnect(string reason = "")
         {
-            _riptideClient.Disconnect();
-            _riptideServer.Stop();
+            RiptideThreader.Disconnect();
+        }
 
-            InternalServerHelpers.OnDisconnect(reason);
+        public string ServerCode { get; private set; } = null;
 
-            OnUpdateLobby();
+        public override string GetServerCode()
+        {
+            return ServerCode;
+        }
+
+        public override void RefreshServerCode()
+        {
+            ServerCode = RandomCodeGenerator.GetString(8);
+
+            LobbyInfoManager.PushLobbyUpdate();
+        }
+
+        public override void JoinServerByCode(string code)
+        {
+            RiptideThreader.ConnectToServer(code);
+        }
+
+        private static MessageSendMode GetSendMode(NetworkChannel channel)
+        {
+            return channel switch
+            {
+                NetworkChannel.Reliable => MessageSendMode.Reliable,
+                NetworkChannel.Unreliable => MessageSendMode.Unreliable,
+                _ => throw new ArgumentOutOfRangeException(nameof(channel), channel, null),
+            };
         }
 
         public override void BroadcastMessage(NetworkChannel channel, FusionMessage message)
         {
-            _riptideServer.SendFusionMessageToAll(message, channel);
+            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), 0, false));
         }
 
         public override void SendFromServer(byte userId, NetworkChannel channel, FusionMessage message)
@@ -261,7 +179,7 @@ namespace FNPlus.Network
 
         public override void SendFromServer(ulong userId, NetworkChannel channel, FusionMessage message)
         {
-            _riptideServer.SendFusionMessage((ushort)userId, message, channel);
+            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), (ushort)userId, false));
         }
 
         public override void SendToServer(NetworkChannel channel, FusionMessage message)
@@ -269,19 +187,7 @@ namespace FNPlus.Network
             if (IsServer)
                 FusionMessageHandler.ReadMessage(message.ToByteArray());
 
-            _riptideClient.SendFusionMessage(message, channel);
-        }
-
-        [MessageHandler(0)]
-        public static void HandleServerMessage(ushort clientId, Message riptideMessage)
-        {
-            FusionMessageHandler.ReadMessage(riptideMessage.GetBytes());
-        }
-
-        [MessageHandler(0)]
-        public static void HandleClientMessage(Message riptideMessage)
-        {
-            FusionMessageHandler.ReadMessage(riptideMessage.GetBytes());
+            RiptideThreader.ClientSendQueue.Enqueue(new Tuple<byte[], MessageSendMode>(message.ToByteArray(), GetSendMode(channel)));
         }
     }
 }

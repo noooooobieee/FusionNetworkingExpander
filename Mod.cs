@@ -14,7 +14,7 @@
 
         public override void OnLateInitializeMelon()
         {
-            PlayerInfo.Initialize();
+            Utilities.PlayerInfo.Initialize();
         }
     }
 }

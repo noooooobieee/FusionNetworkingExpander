@@ -10,15 +10,9 @@ global using MelonLoader.Utils;
 
 global using UnityEngine;
 
-global using Riptide;
-
-global using BoneLib;
-global using BoneLib.BoneMenu;
-
 global using LabFusion;
 global using LabFusion.Data;
 global using LabFusion.Network;
-global using LabFusion.BoneMenu;
 global using LabFusion.Player;
 global using LabFusion.SDK.Gamemodes;
 global using LabFusion.Utilities;

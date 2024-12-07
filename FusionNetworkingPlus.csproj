@@ -11,6 +11,7 @@
   <PropertyGroup>
     <StartupObject />
     <RootNamespace>FNPlus</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="packages\**" />
@@ -55,9 +56,6 @@
 		</Reference>
 		<Reference Include="LabFusion">
 			<HintPath>$(BONELAB_DIR)\Mods\LabFusion.dll</HintPath>
-		</Reference>
-		<Reference Include="BoneLib">
-			<HintPath>$(BONELAB_DIR)\Mods\BoneLib.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2CppOculus.Platform">
 			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Il2CppOculus.Platform.dll</HintPath>
@@ -106,9 +104,6 @@
 		</Reference>
 		<Reference Include="Il2CppURPUnsafe">
 			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Il2CppURPUnsafe.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2CppWave.OpenXR">
-			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Il2CppWave.OpenXR.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2Cppwebsocket-sharp">
 			<HintPath>$(BONELAB_DIR)\MelonLoader\Il2CppAssemblies\Il2Cppwebsocket-sharp.dll</HintPath>
