@@ -106,6 +106,7 @@ namespace FNPlus.Network
         }
 
         internal static readonly ConcurrentQueue<Tuple<byte[], bool>> MessageQueue = new();
+        internal static readonly ConcurrentQueue<Action> ActionQueue = new();
         public override void OnUpdateLayer()
         {
             if (MessageQueue.Count > 0 && MessageQueue.TryDequeue(out Tuple<byte[], bool> messageTuple))
@@ -115,6 +116,9 @@ namespace FNPlus.Network
 
                 FusionMessageHandler.ReadMessage(bytes, isServerHandled);
             }
+
+            if (ActionQueue.Count > 0 && ActionQueue.TryDequeue(out Action action))
+                action();
         }
 
         public void OnUpdateLobby()
@@ -164,7 +168,7 @@ namespace FNPlus.Network
 
         public override void BroadcastMessage(NetworkChannel channel, FusionMessage message)
         {
-            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), 0, false));
+            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), 0, true));
         }
 
         public override void SendFromServer(byte userId, NetworkChannel channel, FusionMessage message)

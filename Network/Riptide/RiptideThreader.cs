@@ -10,6 +10,7 @@ using LabFusion.Senders;
 
 using Riptide;
 using Riptide.Transports;
+using Riptide.Utils;
 
 namespace FNPlus.Network.Riptide
 {
@@ -22,13 +23,12 @@ namespace FNPlus.Network.Riptide
         /// </summary>
         internal static void StartThread()
         {
-            if (_riptideThread == null)
-                _riptideThread = new Thread(RiptideThread);
+            _riptideThread = new Thread(RiptideThread);
 
             if (_riptideThread.IsAlive)
                 return;
 
-            _isThreadKilled = false;
+            _isThreadAlive = true;
 
             _riptideThread.IsBackground = true;
             _riptideThread.Start();
@@ -39,7 +39,7 @@ namespace FNPlus.Network.Riptide
         /// </summary>
         internal static void KillThread()
         {
-            _isThreadKilled = true;
+            _isThreadAlive = false;
         }
 
         // ANYTIME these are accessed outside of the Riptide Thread, please, please, please lock it, future people. (You shouldn't do that anyway but still)
@@ -48,14 +48,13 @@ namespace FNPlus.Network.Riptide
 
         internal static readonly ConcurrentQueue<Tuple<byte[], MessageSendMode>> ClientSendQueue = new();
         internal static readonly ConcurrentQueue<Tuple<byte[], MessageSendMode, ushort, bool>> ServerSendQueue = new();
-        internal static readonly ConcurrentQueue<Action> ActionQueue = new();
 
-        private static bool _isThreadKilled = false;
+        private static bool _isThreadAlive = false;
         private static void RiptideThread()
         {
             InitalizeRiptide();
 
-            while (_isThreadKilled)
+            while (_isThreadAlive)
             {
                 if (ClientSendQueue.Count > 0 && ClientSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode> clientMessageTuple))
                 {
@@ -83,18 +82,54 @@ namespace FNPlus.Network.Riptide
                     else
                         _riptideServer.Send(message, id);
                 }
+
+                _riptideClient.Update();
+                _riptideServer.Update();
             }
 
             DeinitializeRiptide();
+
+            MelonLogger.Msg("Thread dead!");
         }
 
         private static void InitalizeRiptide()
         {
+            RiptideLogger.Initialize(MelonLogger.Msg, true);
+
             _riptideClient = new("RIPTIDE CLIENT");
             _riptideServer = new("RIPTIDE SERVER");
 
             _riptideClient.MessageReceived += OnClientReceives;
             _riptideServer.MessageReceived += OnServerReceives;
+
+            _riptideClient.Disconnected += OnDisconnected;
+            _riptideServer.ClientDisconnected += OnClientDisconnected;
+        }
+
+        private static void OnClientDisconnected(object sender, ServerDisconnectedEventArgs e)
+        {
+            ushort id = e.Client.Id;
+
+            RiptideNetworkLayer.ActionQueue.Enqueue(new Action(() =>
+            {
+                if (id == PlayerIdManager.LocalId)
+                    return;
+
+                // Make sure the user hasn't previously disconnected
+                if (PlayerIdManager.HasPlayerId(id))
+                {
+                    // Update the mod so it knows this user has left
+                    InternalServerHelpers.OnUserLeave(id);
+
+                    // Send disconnect notif to everyone
+                    ConnectionSender.SendDisconnect(id);
+                }
+            }));
+        }
+
+        private static void OnDisconnected(object sender, global::Riptide.DisconnectedEventArgs e)
+        {
+            RiptideNetworkLayer.ActionQueue.Enqueue(new Action(() => InternalServerHelpers.OnDisconnect()));
         }
 
         private static void DeinitializeRiptide()
@@ -108,48 +143,50 @@ namespace FNPlus.Network.Riptide
 
         public static void StartServer()
         {
-            if (_riptideServer == null || _riptideClient == null)
+            lock (_riptideClient)
             {
-                MelonLogger.Error("Riptide server failed to start as the Server or Client was null! This is very bad! Try restarting your game.");
-                return;
-            }
-
-            ActionQueue.Enqueue(new Action(() =>
-            {
-                _riptideServer.Start(7777, 256);
-
-                _riptideClient.Connected += OnConnect;
-                _riptideClient.Connect("127.0.0.1:7777");
-
-                void OnConnect(object sender, EventArgs args)
+                lock (_riptideServer)
                 {
-                    _riptideClient.Connected -= OnConnect;
+                    MelonLogger.Msg(Thread.CurrentThread.IsBackground);
 
-                    IsServerRunning = true;
-                    IsClientConnected = true;
+                    _riptideServer.Start(7777, 256, 0, false);
 
-                    PlayerIdManager.SetLongId(_riptideClient.Id);
-                    LocalPlayer.Username = Utilities.PlayerInfo.Username;
+                    _riptideClient.Connected += OnConnect;
+                    _riptideClient.Connect("127.0.0.1:7777", 5, 0, null, false);
 
-                    InternalServerHelpers.OnStartServer();
+                    void OnConnect(object sender, EventArgs args)
+                    {
+                        _riptideClient.Connected -= OnConnect;
+
+                        IsServerRunning = true;
+                        IsClientConnected = true;
+
+                        RiptideNetworkLayer.ActionQueue.Enqueue(() =>
+                        {
+                            PlayerIdManager.SetLongId(_riptideClient.Id);
+                            LocalPlayer.Username = Utilities.PlayerInfo.Username;
+
+                            InternalServerHelpers.OnStartServer();
+                        });
+                    }
                 }
-            }));
+            }
         }
 
         public static void StopServer()
         {
-            ActionQueue.Enqueue(new Action(() => 
+            lock (_riptideServer)
             {
                 _riptideServer.Stop();
 
                 IsServerRunning = false;
                 IsClientConnected = false;
-            }));
+            }
         }
 
         public static void ConnectToServer(string serverCode)
         {
-            ActionQueue.Enqueue(new Action(() => 
+            lock (_riptideClient)
             {
                 string ipString;
 
@@ -159,7 +196,7 @@ namespace FNPlus.Network.Riptide
                     ipString = IPUtils.DecodeIPAddress(serverCode);
 
                 _riptideClient.Connected += OnConnect;
-                _riptideClient.Connect($"{ipAddress}:7777");
+                _riptideClient.Connect($"{ipAddress}:7777", 5, 0, null, false);
 
                 void OnConnect(object sender, EventArgs args)
                 {
@@ -167,22 +204,32 @@ namespace FNPlus.Network.Riptide
 
                     IsClientConnected = true;
 
-                    PlayerIdManager.SetLongId(_riptideClient.Id);
-                    LocalPlayer.Username = Utilities.PlayerInfo.Username;
+                    RiptideNetworkLayer.ActionQueue.Enqueue(() =>
+                    {
+                        PlayerIdManager.SetLongId(_riptideClient.Id);
+                        LocalPlayer.Username = Utilities.PlayerInfo.Username;
 
-                    ConnectionSender.SendConnectionRequest();
+                        ConnectionSender.SendConnectionRequest();
+                    });
                 }
-            }));
+            }
         }
 
         public static void Disconnect()
         {
-            ActionQueue.Enqueue(new Action(() => 
+            lock (_riptideClient)
             {
-                _riptideClient.Disconnect();
+                lock (_riptideServer)
+                {
+                    if (IsServerRunning)
+                        _riptideServer.Stop();
+                    if (IsClientConnected)
+                        _riptideClient.Disconnect();
 
-                IsClientConnected = false;
-            }));
+                    IsClientConnected = false;
+                    IsServerRunning = false;
+                }
+            }
         }
 
         private static void OnServerReceives(object sender, MessageReceivedEventArgs e)
