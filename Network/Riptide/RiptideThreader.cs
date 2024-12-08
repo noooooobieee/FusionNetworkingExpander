@@ -1,19 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
-using Il2CppInterop.Runtime;
+
 using LabFusion.Senders;
 
 using Riptide;
-using Riptide.Transports;
-using Riptide.Utils;
 
-namespace FNPlus.Network.Riptide
+namespace FNPlus.Network
 {
     internal class RiptideThreader
     {
@@ -183,8 +175,6 @@ namespace FNPlus.Network.Riptide
             {
                 lock (_riptideServer)
                 {
-                    MelonLogger.Msg(Thread.CurrentThread.IsBackground);
-
                     _riptideServer.Start(7777, 256, 0, false);
 
                     _riptideClient.Connected += OnConnect;

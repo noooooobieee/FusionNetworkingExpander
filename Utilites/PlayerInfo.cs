@@ -1,34 +1,21 @@
-﻿using System.Net.Http;
-using System.Threading.Tasks;
-
-using Il2CppOculus.Platform;
+﻿using Il2CppOculus.Platform;
 using Il2CppOculus.Platform.Models;
 
 using Steamworks;
 
 namespace FNPlus.Utilities
 {
-    /// <summary>
-    /// Class for managing player info.
-    /// </summary>
     public class PlayerInfo
     {
         public static string PlayerIpAddress { get; private set; } = "Unknown";
-        public static string Username { get; private set; } = "Unknown";
 
         internal static void Initialize()
         {
             PlayerIpAddress = GetPlayerIPAddress();
-            Username = GetPlayerUsername();
-
-#if DEBUG
-            MelonLogger.Msg($"Player IP Address: {PlayerIpAddress}");
-            MelonLogger.Msg($"Username: {Username}");
-#endif
+            SetupPlayerUsername();
         }
 
-        private static TaskCompletionSource<string> _usernameTaskSource = new();
-        private static string GetPlayerUsername()
+        private static void SetupPlayerUsername()
         {
             // Steam
             if (Path.GetFileName(UnityEngine.Application.dataPath) == "BONELAB_Steam_Windows64_Data")
@@ -36,11 +23,8 @@ namespace FNPlus.Utilities
                 if (!SteamClient.IsValid)
                     SteamClient.Init(250820, false);
 
-                string username = SteamClient.Name;
-                LocalPlayer.Username = username;
+                LocalPlayer.Username = SteamClient.Name;
                 SteamClient.Shutdown();
-
-                return username;
             }
 
             // Oculus
@@ -50,15 +34,12 @@ namespace FNPlus.Utilities
                 Core.Initialize("4215734068529064");
 
             var request = Users.GetLoggedInUser();
-
             request.OnComplete((Message<User>.Callback)OnComplete);
+
             void OnComplete(Message<User> msg)
             {
-                Username = msg.Data.OculusID;
-                LocalPlayer.Username = Username;
+                LocalPlayer.Username = msg.Data.OculusID;
             }
-
-            return "Unknown";
         }
 
         private static string GetPlayerIPAddress()
