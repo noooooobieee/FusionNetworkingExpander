@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Il2CppInterop.Runtime;
 using LabFusion.Senders;
 
 using Riptide;
@@ -56,45 +57,74 @@ namespace FNPlus.Network.Riptide
 
             while (_isThreadAlive)
             {
-                if (ClientSendQueue.Count > 0 && ClientSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode> clientMessageTuple))
+                try
                 {
-                    byte[] messageData = clientMessageTuple.Item1;
-                    MessageSendMode sendMode = clientMessageTuple.Item2;
-
-                    Message message = Message.Create(sendMode, 0);
-                    message.AddBytes(messageData);
-
-                    _riptideClient.Send(message);
+                    _riptideClient.Update();
+                    _riptideServer.Update();
+                }
+                catch (Exception ex)
+                {
+                    MelonLogger.Error($"Failed to update Riptide with exception: {ex}");
                 }
 
-                if (ServerSendQueue.Count > 0 && ServerSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode, ushort, bool> serverMessageTuple))
+                for (int i = 0; i < ClientSendQueue.Count; i++)
                 {
-                    byte[] messageData = serverMessageTuple.Item1;
-                    MessageSendMode sendMode = serverMessageTuple.Item2;
-                    ushort id = serverMessageTuple.Item3;
-                    bool isBroadcast = serverMessageTuple.Item4;
+                    if (ClientSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode> clientMessageTuple))
+                    {
+                        byte[] messageData = clientMessageTuple.Item1;
+                        MessageSendMode sendMode = clientMessageTuple.Item2;
 
-                    Message message = Message.Create(sendMode, 0);
-                    message.AddBytes(messageData);
+                        try
+                        {
+                            Message message = Message.Create(sendMode, 0);
+                            message.AddBytes(messageData);
 
-                    if (isBroadcast)
-                        _riptideServer.SendToAll(message);
-                    else
-                        _riptideServer.Send(message, id);
+                            _riptideClient.Send(message);
+                        } 
+                        catch (Exception ex)
+                        {
+                            MelonLogger.Error($"Failed to send message with exception: {ex}");
+                        }
+                    }
                 }
 
-                _riptideClient.Update();
-                _riptideServer.Update();
+                for (int i = 0; i < ServerSendQueue.Count; i++)
+                {
+                    if (ServerSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode, ushort, bool> serverMessageTuple))
+                    {
+                        byte[] messageData = serverMessageTuple.Item1;
+                        MessageSendMode sendMode = serverMessageTuple.Item2;
+                        ushort id = serverMessageTuple.Item3;
+                        bool isBroadcast = serverMessageTuple.Item4;
+
+                        try
+                        {
+                            Message message = Message.Create(sendMode, 0);
+                            message.AddBytes(messageData);
+
+                            if (isBroadcast && IsServerRunning)
+                                _riptideServer.SendToAll(message);
+                            else if (isBroadcast && !IsServerRunning)
+                                _riptideClient.Send(message);
+                            else
+                                _riptideServer.Send(message, id);
+                        } 
+                        catch (Exception ex) 
+                        {
+                            MelonLogger.Error($"Failed to send message with exception: {ex}");
+                        }
+                    }
+                }
             }
 
             DeinitializeRiptide();
-
-            MelonLogger.Msg("Thread dead!");
         }
 
         private static void InitalizeRiptide()
         {
+#if DEBUG
             RiptideLogger.Initialize(MelonLogger.Msg, true);
+#endif
 
             _riptideClient = new("RIPTIDE CLIENT");
             _riptideServer = new("RIPTIDE SERVER");
@@ -104,6 +134,17 @@ namespace FNPlus.Network.Riptide
 
             _riptideClient.Disconnected += OnDisconnected;
             _riptideServer.ClientDisconnected += OnClientDisconnected;
+            _riptideServer.ClientConnected += OnClientConnected;
+        }
+
+        private static void OnDisconnected(object sender, global::Riptide.DisconnectedEventArgs e)
+        {
+            RiptideNetworkLayer.ActionQueue.Enqueue(new Action(() => NetworkHelper.Disconnect()));
+        }
+
+        private static void OnClientConnected(object sender, ServerConnectedEventArgs e)
+        {
+            e.Client.CanQualityDisconnect = false;
         }
 
         private static void OnClientDisconnected(object sender, ServerDisconnectedEventArgs e)
@@ -125,11 +166,6 @@ namespace FNPlus.Network.Riptide
                     ConnectionSender.SendDisconnect(id);
                 }
             }));
-        }
-
-        private static void OnDisconnected(object sender, global::Riptide.DisconnectedEventArgs e)
-        {
-            RiptideNetworkLayer.ActionQueue.Enqueue(new Action(() => InternalServerHelpers.OnDisconnect()));
         }
 
         private static void DeinitializeRiptide()
@@ -157,6 +193,10 @@ namespace FNPlus.Network.Riptide
                     void OnConnect(object sender, EventArgs args)
                     {
                         _riptideClient.Connected -= OnConnect;
+
+                        _riptideClient.TimeoutTime = 30000;
+                        _riptideClient.Connection.CanQualityDisconnect = false;
+                        _riptideServer.TimeoutTime = 30000;
 
                         IsServerRunning = true;
                         IsClientConnected = true;
@@ -196,11 +236,14 @@ namespace FNPlus.Network.Riptide
                     ipString = IPUtils.DecodeIPAddress(serverCode);
 
                 _riptideClient.Connected += OnConnect;
-                _riptideClient.Connect($"{ipAddress}:7777", 5, 0, null, false);
+                _riptideClient.Connect($"{ipString}:7777", 5, 0, null, false);
 
                 void OnConnect(object sender, EventArgs args)
                 {
                     _riptideClient.Connected -= OnConnect;
+
+                    _riptideClient.TimeoutTime = 30000;
+                    _riptideClient.Connection.CanQualityDisconnect = false;
 
                     IsClientConnected = true;
 
@@ -215,19 +258,19 @@ namespace FNPlus.Network.Riptide
             }
         }
 
-        public static void Disconnect()
+        public static void Disconnect(string reason = "")
         {
             lock (_riptideClient)
             {
                 lock (_riptideServer)
                 {
-                    if (IsServerRunning)
-                        _riptideServer.Stop();
-                    if (IsClientConnected)
-                        _riptideClient.Disconnect();
+                    _riptideServer.Stop();
+                    _riptideClient.Disconnect();
 
                     IsClientConnected = false;
                     IsServerRunning = false;
+
+                    InternalServerHelpers.OnDisconnect(reason);
                 }
             }
         }

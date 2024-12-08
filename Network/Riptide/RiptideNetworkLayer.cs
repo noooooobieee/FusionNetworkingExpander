@@ -109,16 +109,20 @@ namespace FNPlus.Network
         internal static readonly ConcurrentQueue<Action> ActionQueue = new();
         public override void OnUpdateLayer()
         {
-            if (MessageQueue.Count > 0 && MessageQueue.TryDequeue(out Tuple<byte[], bool> messageTuple))
-            {
-                byte[] bytes = messageTuple.Item1;
-                bool isServerHandled = messageTuple.Item2;
+            for (int i = 0; i < MessageQueue.Count; i++)
+            { 
+                if (MessageQueue.TryDequeue(out Tuple<byte[], bool> messageTuple))
+                {
+                    byte[] bytes = messageTuple.Item1;
+                    bool isServerHandled = messageTuple.Item2;
 
-                FusionMessageHandler.ReadMessage(bytes, isServerHandled);
+                    FusionMessageHandler.ReadMessage(bytes, isServerHandled);
+                }
             }
 
-            if (ActionQueue.Count > 0 && ActionQueue.TryDequeue(out Action action))
-                action();
+            for (int i = 0; i < ActionQueue.Count; i++)
+                if (ActionQueue.TryDequeue(out Action action))
+                    action();
         }
 
         public void OnUpdateLobby()
@@ -146,7 +150,15 @@ namespace FNPlus.Network
 
         public override void RefreshServerCode()
         {
-            ServerCode = RandomCodeGenerator.GetString(8);
+            ServerCode = IPUtils.EncodeIPAddress(Utilities.PlayerInfo.PlayerIpAddress);
+            GUIUtility.systemCopyBuffer = ServerCode;
+
+            FusionNotifier.Send(new FusionNotification()
+            {
+                SaveToMenu = false,
+                Message = "Saved Code to Clipboard!",
+                Type = NotificationType.INFORMATION,
+            });
 
             LobbyInfoManager.PushLobbyUpdate();
         }
