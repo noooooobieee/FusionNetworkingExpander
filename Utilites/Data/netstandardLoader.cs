@@ -5,7 +5,7 @@
         internal static void Load()
         {
             string sdkPath = PersistentData.GetPath($"netstandard.dll");
-            File.WriteAllBytes(sdkPath, EmbeddedResource.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), ResourcePaths.netstandardPath));
+            File.WriteAllBytes(sdkPath, EmbeddedResource.LoadFromAssembly(Assembly.GetExecutingAssembly(), ResourcePaths.netstandardPath));
 
             MelonAssembly.LoadMelonAssembly(sdkPath);
         }

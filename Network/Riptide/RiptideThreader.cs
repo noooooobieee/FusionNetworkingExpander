@@ -47,6 +47,8 @@ namespace FNPlus.Network
         {
             InitalizeRiptide();
 
+            int tickCounter = 0;
+
             while (_isThreadAlive)
             {
                 try
@@ -59,7 +61,7 @@ namespace FNPlus.Network
                     MelonLogger.Error($"Failed to update Riptide with exception: {ex}");
                 }
 
-                for (int i = 0; i < ClientSendQueue.Count; i++)
+                while (!ClientSendQueue.IsEmpty)
                 {
                     if (ClientSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode> clientMessageTuple))
                     {
@@ -72,7 +74,7 @@ namespace FNPlus.Network
                             message.AddBytes(messageData);
 
                             _riptideClient.Send(message);
-                        } 
+                        }
                         catch (Exception ex)
                         {
                             MelonLogger.Error($"Failed to send message with exception: {ex}");
@@ -80,7 +82,7 @@ namespace FNPlus.Network
                     }
                 }
 
-                for (int i = 0; i < ServerSendQueue.Count; i++)
+                while (!ServerSendQueue.IsEmpty)
                 {
                     if (ServerSendQueue.TryDequeue(out Tuple<byte[], MessageSendMode, ushort, bool> serverMessageTuple))
                     {
@@ -100,12 +102,43 @@ namespace FNPlus.Network
                                 _riptideClient.Send(message);
                             else
                                 _riptideServer.Send(message, id);
-                        } 
-                        catch (Exception ex) 
+                        }
+                        catch (Exception ex)
                         {
                             MelonLogger.Error($"Failed to send message with exception: {ex}");
                         }
                     }
+                }
+
+                // Poll less important things
+                tickCounter++;
+                if (tickCounter >= 300)
+                {
+                    tickCounter = 0;
+
+                    short ping = 0;
+                    if (IsClientConnected)
+                        ping = _riptideClient.RTT;
+                    RiptideNetworkLayer.ActionQueue.Enqueue(new Action(() =>
+                    {
+                        // Hide if not in server
+                        if (ping <= 0)
+                        {
+                            RiptideNetworkLayer.PingDisplayTMP.text = "";
+                            return;
+                        }
+
+                        // Set ping
+                        RiptideNetworkLayer.PingDisplayTMP.text = $"PING: {ping}";
+
+                        // Connection quality colors
+                        if (ping < 100)
+                            RiptideNetworkLayer.PingDisplayTMP.color = Color.cyan;
+                        else if (ping < 200)
+                            RiptideNetworkLayer.PingDisplayTMP.color = Color.yellow;
+                        else
+                            RiptideNetworkLayer.PingDisplayTMP.color = Color.red;
+                    }));
                 }
             }
 
@@ -117,6 +150,8 @@ namespace FNPlus.Network
 #if DEBUG
             RiptideLogger.Initialize(MelonLogger.Msg, true);
 #endif
+            // Will a couple voice chat packets be lost? Maybe. I don't care, it's better than nothing!
+            Message.MaxPayloadSize = 60000;
 
             _riptideClient = new("RIPTIDE CLIENT");
             _riptideServer = new("RIPTIDE SERVER");
@@ -194,7 +229,6 @@ namespace FNPlus.Network
                         RiptideNetworkLayer.ActionQueue.Enqueue(() =>
                         {
                             PlayerIdManager.SetLongId(_riptideClient.Id);
-                            LocalPlayer.Username = Utilities.PlayerInfo.Username;
 
                             InternalServerHelpers.OnStartServer();
                         });
@@ -214,23 +248,65 @@ namespace FNPlus.Network
             }
         }
 
+        private static bool _isConnecting;
         public static void ConnectToServer(string serverCode)
         {
+            if (_isConnecting)
+            {
+                FusionNotifier.Send(new FusionNotification()
+                {
+                    Message = "Client is still connecting! Please wait until connection is finalized or failed.",
+                    PopupLength = 5,
+                    SaveToMenu = false,
+                    Type = NotificationType.WARNING,
+                });
+                return;
+            }
+
+            if (IsClientConnected)
+            {
+                FusionNotifier.Send(new FusionNotification()
+                {
+                    Message = "Disconnect from the current server before connecting to another!",
+                    PopupLength = 5,
+                    SaveToMenu = false,
+                    Type = NotificationType.WARNING,
+                });
+                return;
+            }
+
+            string ipString;
+
+            if (IPAddress.TryParse(serverCode, out IPAddress ipAddress))
+                ipString = serverCode;
+            else if (IPUtils.DecodeIPAddress(serverCode) != string.Empty)
+                ipString = IPUtils.DecodeIPAddress(serverCode);
+            else
+            {
+                FusionNotifier.Send(new FusionNotification()
+                {
+                    Message = "Server Code or IP Address incorrect! Make sure you used the right code/IP!",
+                    PopupLength = 5,
+                    SaveToMenu = false,
+                    Type = NotificationType.WARNING,
+                });
+                return;
+            }
+
             lock (_riptideClient)
             {
-                string ipString;
-
-                if (IPAddress.TryParse(serverCode, out IPAddress ipAddress))
-                    ipString = serverCode;
-                else
-                    ipString = IPUtils.DecodeIPAddress(serverCode);
-
                 _riptideClient.Connected += OnConnect;
+                _riptideClient.ConnectionFailed += OnConnectionFailed;
+
                 _riptideClient.Connect($"{ipString}:7777", 5, 0, null, false);
+                _isConnecting = true;
 
                 void OnConnect(object sender, EventArgs args)
                 {
                     _riptideClient.Connected -= OnConnect;
+                    _riptideClient.ConnectionFailed -= OnConnectionFailed;
+
+                    _isConnecting = false;
 
                     _riptideClient.TimeoutTime = 30000;
                     _riptideClient.Connection.CanQualityDisconnect = false;
@@ -240,9 +316,25 @@ namespace FNPlus.Network
                     RiptideNetworkLayer.ActionQueue.Enqueue(() =>
                     {
                         PlayerIdManager.SetLongId(_riptideClient.Id);
-                        LocalPlayer.Username = Utilities.PlayerInfo.Username;
 
                         ConnectionSender.SendConnectionRequest();
+                    });
+                }
+
+                void OnConnectionFailed(object sender, ConnectionFailedEventArgs args)
+                {
+                    _riptideClient.Connected -= OnConnect;
+                    _riptideClient.ConnectionFailed -= OnConnectionFailed;
+
+                    _isConnecting = false;
+
+                    FusionNotifier.Send(new FusionNotification()
+                    {
+                        Title = "Failed to Connect!",
+                        Message = $"REASON: {args.Reason}",
+                        SaveToMenu = false,
+                        PopupLength = 5,
+                        Type = NotificationType.ERROR,
                     });
                 }
             }
@@ -254,6 +346,9 @@ namespace FNPlus.Network
             {
                 lock (_riptideServer)
                 {
+                    if (!IsClientConnected)
+                        return;
+
                     _riptideServer.Stop();
                     _riptideClient.Disconnect();
 

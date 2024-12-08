@@ -1,4 +1,7 @@
-﻿using Riptide;
+﻿using FNPlus.Patches;
+using Il2CppTMPro;
+using LabFusion.Menu;
+using Riptide;
 
 namespace FNPlus.Network
 {
@@ -16,18 +19,11 @@ namespace FNPlus.Network
         public override bool CheckValidation() => true;
 
         // Riptide doesn't really have a way to add these features out of the box...
-        public override string GetUsername(ulong userId) => "Riptide Enjoyer";
+        public override string GetUsername(ulong userId) => $"Riptide Enjoyer {userId}";
         public override bool IsFriend(ulong userId) => false;
 
-        public override void LogIn()
-        {
-            InvokeLoggedInEvent();
-        }
-
-        public override void LogOut() 
-        {
-            InvokeLoggedOutEvent(); 
-        }
+        public override void LogIn() => InvokeLoggedInEvent();
+        public override void LogOut() => InvokeLoggedOutEvent();
 
         public override void OnInitializeLayer()
         {
@@ -37,6 +33,8 @@ namespace FNPlus.Network
 
             _voiceManager = new UnityVoiceManager();
             _voiceManager.Enable();
+
+            CreateRiptideUIElements();
         }
 
         public override void OnDeinitializeLayer()
@@ -49,6 +47,8 @@ namespace FNPlus.Network
             RiptideThreader.KillThread();
 
             UnhookRiptideEvents();
+
+            RemoveRiptideUIElements();
         }
 
         private void HookRiptideEvents()
@@ -57,8 +57,6 @@ namespace FNPlus.Network
             MultiplayerHooking.OnPlayerJoin += OnPlayerJoin;
             MultiplayerHooking.OnPlayerLeave += OnPlayerLeave;
             MultiplayerHooking.OnDisconnect += OnDisconnect;
-
-            LobbyInfoManager.OnLobbyInfoChanged += OnUpdateLobby;
         }
 
         private void UnhookRiptideEvents()
@@ -67,8 +65,33 @@ namespace FNPlus.Network
             MultiplayerHooking.OnPlayerJoin -= OnPlayerJoin;
             MultiplayerHooking.OnPlayerLeave -= OnPlayerLeave;
             MultiplayerHooking.OnDisconnect -= OnDisconnect;
+        }
 
-            LobbyInfoManager.OnLobbyInfoChanged -= OnUpdateLobby;
+        static Transform pingDisplayTransform = null;
+        internal static TMP_Text PingDisplayTMP = null;
+        internal static void CreateRiptideUIElements()
+        {
+            MenuMatchmakingPatches.HideOptions();
+
+            if (!pingDisplayTransform)
+            {
+                pingDisplayTransform = GameObject.Instantiate(MenuCreator.MenuGameObject.transform.Find("page_Profile/text_Title"), MenuCreator.MenuGameObject.transform);
+                PingDisplayTMP = pingDisplayTransform.GetComponent<TMP_Text>();
+
+                pingDisplayTransform.localPosition = new Vector3(-330, 330, 0);
+                PingDisplayTMP.text = "PING:";
+                pingDisplayTransform.gameObject.SetActive(true);
+            }
+            else
+                pingDisplayTransform.gameObject.SetActive(true);
+        }
+
+        internal static void RemoveRiptideUIElements()
+        {
+            MenuMatchmakingPatches.ShowOptions();
+
+            if (pingDisplayTransform)
+                pingDisplayTransform.gameObject.SetActive(false);
         }
 
         private void OnPlayerJoin(PlayerId id)
@@ -119,12 +142,6 @@ namespace FNPlus.Network
                     action();
         }
 
-        public void OnUpdateLobby()
-        {
-            if (!IsClient)
-                LocalPlayer.Username = Utilities.PlayerInfo.Username;
-        }
-
         public override void StartServer()
         {
             RiptideThreader.StartServer();
@@ -136,11 +153,7 @@ namespace FNPlus.Network
         }
 
         public string ServerCode { get; private set; } = null;
-
-        public override string GetServerCode()
-        {
-            return ServerCode;
-        }
+        public override string GetServerCode() => ServerCode;
 
         public override void RefreshServerCode()
         {
@@ -152,9 +165,8 @@ namespace FNPlus.Network
                 SaveToMenu = false,
                 Message = "Saved Code to Clipboard!",
                 Type = NotificationType.INFORMATION,
+                PopupLength = 3,
             });
-
-            LobbyInfoManager.PushLobbyUpdate();
         }
 
         public override void JoinServerByCode(string code)
@@ -174,7 +186,12 @@ namespace FNPlus.Network
 
         public override void BroadcastMessage(NetworkChannel channel, FusionMessage message)
         {
-            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), 0, true));
+            byte[] data = message.ToByteArray();
+            MessageSendMode sendMode = GetSendMode(channel);
+
+            var messageTuple = new Tuple<byte[], MessageSendMode, ushort, bool>(data, sendMode, 0, true);
+
+            RiptideThreader.ServerSendQueue.Enqueue(messageTuple);
         }
 
         public override void SendFromServer(byte userId, NetworkChannel channel, FusionMessage message)
@@ -189,15 +206,25 @@ namespace FNPlus.Network
 
         public override void SendFromServer(ulong userId, NetworkChannel channel, FusionMessage message)
         {
-            RiptideThreader.ServerSendQueue.Enqueue(new Tuple<byte[], MessageSendMode, ushort, bool>(message.ToByteArray(), GetSendMode(channel), (ushort)userId, false));
+            byte[] data = message.ToByteArray();
+            MessageSendMode sendMode = GetSendMode(channel);
+
+            var messageTuple = new Tuple<byte[], MessageSendMode, ushort, bool>(data, sendMode, (ushort)userId, false);
+
+            RiptideThreader.ServerSendQueue.Enqueue(messageTuple);
         }
 
         public override void SendToServer(NetworkChannel channel, FusionMessage message)
         {
-            if (IsServer)
-                FusionMessageHandler.ReadMessage(message.ToByteArray());
+            byte[] data = message.ToByteArray();
+            MessageSendMode sendMode = GetSendMode(channel);
 
-            RiptideThreader.ClientSendQueue.Enqueue(new Tuple<byte[], MessageSendMode>(message.ToByteArray(), GetSendMode(channel)));
+            var messageTuple = new Tuple<byte[], MessageSendMode>(data, sendMode);
+
+            if (IsServer)
+                FusionMessageHandler.ReadMessage(data);
+            else
+                RiptideThreader.ClientSendQueue.Enqueue(messageTuple);
         }
     }
 }
