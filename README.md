@@ -3,13 +3,14 @@
 ## About
 ### A fork of FusionNetworkingPlus, aims to add more networking layers!
 
-### Currently, there is only Riptide Layer, since mod is being worked on currently.
+### Currently, there is only Riptide Layer, since mod is being worked on right now.
 
 ### Just a note, you dont need to have installed FusionNetworkingPlus to make this mod work.
 
 ## Current Network Layers:
 ### - Riptide
 + Server authoritative P2P networking for lower latency and standalone use!
++ No public lobbies because P2P...
 
 ## Current Working On Layers:
 ### - Nakama
