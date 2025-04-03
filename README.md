@@ -1,12 +1,17 @@
-# Fusion Networking Plus
+![Logo](https://ibb.co/pvMnPFcS)
+# FusionNetworkingExtender
 ## About
-### A mod for BONELAB Fusion adding more NetworkLayer options.
+### A fork of FusionNetworkingPlus, aims to add more networking layers!
+
+### Currently, there is only Riptide Layer, since mod is being worked on currently.
+
+### Just a note, you dont need to have installed FusionNetworkingPlus to make this mod work.
 
 ## Current Network Layers:
 ### - Riptide
 + Server authoritative P2P networking for lower latency and standalone use!
 
-## Planned/Future Possible Network Layers:
+## Current Working On Layers:
 ### - Nakama
 + Self hosted, web-socket based networking popular for its use in competitive games.
 ### - EOS
@@ -21,3 +26,8 @@
 + Multiplayer mod for the Physics VR game Bonelab.
 + Liscensed under the MIT liscense
 + Github Repo: [https://github.com/Lakatrazz/BONELAB-Fusion]
+### FusionNetworkingPlus
++ Mod that adds more networking layers to a Fusion.
++ Liscensed under the MIT liscense
++ Github Repo:
+[https://github.com/KitchenBoy08/FusionNetworkingPlus]
