@@ -5,7 +5,7 @@ using LabFusion.Senders;
 
 using Riptide;
 
-namespace FNPlus.Network
+namespace FNExtender.Network
 {
     internal class RiptideThreader
     {

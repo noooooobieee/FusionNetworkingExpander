@@ -1,9 +1,9 @@
-﻿using FNPlus.Patches;
+﻿using FNExtender.Patches;
 using Il2CppTMPro;
 using LabFusion.Menu;
 using Riptide;
 
-namespace FNPlus.Network
+namespace FNExtender.Network
 {
     public class RiptideNetworkLayer : NetworkLayer
     {

@@ -3,7 +3,7 @@ using Il2CppOculus.Platform.Models;
 
 using Steamworks;
 
-namespace FNPlus.Utilities
+namespace FNExtender.Utilities
 {
     public class PlayerInfo
     {

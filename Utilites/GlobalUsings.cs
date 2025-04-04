@@ -19,5 +19,5 @@ global using LabFusion.Utilities;
 global using LabFusion.Voice;
 global using LabFusion.Voice.Unity;
 
-global using FNPlus;
-global using FNPlus.Utilities;
+global using FNExtender;
+global using FNExtender.Utilities;

@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FNPlus.Network;
+using FNExtender.Network;
 using HarmonyLib;
 using LabFusion.Menu;
 
-namespace FNPlus.Patches
+namespace FNExtender.Patches
 {
     [HarmonyPatch(typeof(MenuMatchmaking))]
     public class MenuMatchmakingPatches
