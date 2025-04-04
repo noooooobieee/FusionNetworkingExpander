@@ -17,6 +17,8 @@
 + Self hosted, web-socket based networking popular for its use in competitive games.
 ### - EOS
 + Free, relay based networking similar to Steamworks but available on all platforms. (though quite complicated to implement)
+### - Photon
++ Free, popular multiplayer service for Unity games and avaliable for all platforms.
 
 ## Credits
 ### RiptideNetworking
