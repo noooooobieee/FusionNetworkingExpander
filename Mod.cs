@@ -1,4 +1,4 @@
-﻿namespace FNPlus
+﻿namespace FNExtender
 {
     internal partial class Mod : MelonMod
     {
