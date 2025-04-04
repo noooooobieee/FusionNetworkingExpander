@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
-    <AssemblyName>FNPlus</AssemblyName>
+    <AssemblyName>FNExtender</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
@@ -10,7 +10,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
-    <RootNamespace>FNPlus</RootNamespace>
+    <RootNamespace>FNExtender</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
