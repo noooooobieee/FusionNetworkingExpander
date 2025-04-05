@@ -2,7 +2,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace FusionNetworkingPlus.Patches.Fusion
+namespace FusionNetworkingExtender.Patches.Fusion
 {
     [HarmonyPatch]
     public static class ConnectionPatches
